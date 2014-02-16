@@ -7,7 +7,7 @@ module RBS
   end
 
   class Lexer
-    attr_reader :input, :index, :line, :column, :state, :tokens
+    attr_reader :input, :index, :line, :column, :state
 
     def initialize(input)
       @input = input

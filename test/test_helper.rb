@@ -11,6 +11,10 @@ class Minitest::Test
     end
   end
 
+  def assert_tokens(expected, actual)
+    assert_equal expected.map(&:to_sym), actual.map(&:name)
+  end
+
   def assert_token_values(expected, actual)
     assert_equal expected, actual
       .reject { |t| t === :whitespace }
