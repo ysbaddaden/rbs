@@ -1,0 +1,12 @@
+#! /usr/bin/env ruby
+$:.unshift File.expand_path('../../lib', File.realpath(__FILE__))
+
+require 'rbs/lexer'
+require 'rbs/lexer/rewriter'
+require 'rbs/parser'
+require 'json'
+
+lexer = RBS::Rewriter.new(RBS::Lexer.new(ARGF.read))
+parser = RBS::Parser.new(lexer)
+puts JSON.pretty_generate(parser.parse.as_json)
+

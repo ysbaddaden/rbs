@@ -1,0 +1,9 @@
+#! /usr/bin/env ruby
+$:.unshift File.expand_path('../../lib', File.realpath(__FILE__))
+
+require 'rbs/lexer'
+require 'rbs/lexer/rewriter'
+require 'pp'
+
+lexer = RBS::Rewriter.new(RBS::Lexer.new(ARGF.read))
+pp lexer.tokens

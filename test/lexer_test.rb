@@ -126,6 +126,11 @@ class RBS::LexerTest < Minitest::Test
       RBS::Lexer.new('-> { console.log("download #{code} into #{directoryEntry}") }').tokens
   end
 
+  def test_modulo_operator_isnt_a_literal
+    assert_token [:'%', '%'], RBS::Lexer.new("% ").lex
+    assert_token [:'%=', '%='], RBS::Lexer.new("%=").lex
+  end
+
   def test_string_literal
     assert_token [:STRING, 'string'], RBS::Lexer.new("%(string)").lex
     assert_token [:STRING, 'string'], RBS::Lexer.new("%$string$").lex

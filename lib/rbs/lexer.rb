@@ -1,11 +1,9 @@
 require 'rbs/state'
+require 'rbs/errors'
 require 'rbs/lexer/definition'
 require 'rbs/lexer/token'
 
 module RBS
-  class ParseError < StandardError
-  end
-
   class Lexer
     attr_reader :input, :index, :line, :column, :state
 

@@ -29,5 +29,9 @@ module RBS
       val = value unless value.nil? || value == name.to_s
       '[' + [name, val].compact.join(' ') + ']'
     end
+
+    def position
+      "#{line},#{column}"
+    end
   end
 end

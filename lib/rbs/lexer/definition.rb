@@ -11,6 +11,9 @@ module RBS
     + - ~ * / % && || & | ^ << >> == != <= >= => < >
     ... .. . , = : ? !
   )
+  ASSIGNMENT_OPERATOR = %i(= += -= *= /= %= &= |= ^= ||= >>= <<=)
+  BINARY_OPERATOR = %i(+ - ~ * / % && || & | ^ << >> == != <= >= => < > ... ..)
+  UNARY_OPERATOR = %i(+ - ~ ! typeof)
 
   PARENS = %i(\( \) { } [ ])
 
@@ -47,7 +50,7 @@ module RBS
       #STRING =    /\A('(\.|[^\'])*')/
       STRING =     /\A(')/
       STRING2 =    /\A(")/
-      STRING3 =    /\A%([^\w])/
+      STRING3 =    /\A%([^\w\s=])/
       WORDS =      /\A%w([^\w])/
       IDENTIFIER = /\A([$A-Z\_a-z][$A-Z\_a-z0-9]*)/
     end

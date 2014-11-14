@@ -21,4 +21,35 @@ class Minitest::Test
       .map { |t| t === :STRING ? t.value.inspect : t.value }
       .compact
   end
+
+
+  def assert_ast(expected, expression)
+    case expected
+    when Symbol, String
+      assert_equal expected.to_sym, expression.type
+    when Hash
+      expected.each do |param, expect|
+        assert_respond_to expression, param.to_sym
+        assert_ast expect, expression.__send__(param)
+      end
+    when Array
+      assert_instance_of Array, expression
+      assert_equal expected.size, expression.size,
+        "Expected #{expression} to have #{expected.size} items, but was #{expression.size}"
+
+      expected.each_with_index do |expect, index|
+        assert_ast expect, expression[index]
+      end
+    else
+      flunk "unknown expected: #{expected}"
+    end
+  end
+
+  def assert_expression(expected, code)
+    assert_ast expected, parse(code).body.first.expression
+  end
+
+  def assert_statement(expected, code)
+    assert_ast expected, parse(code).body.first
+  end
 end
