@@ -58,6 +58,23 @@ class RBS::ParserTest < Minitest::Test
     assert_statement({ consequent: { body: [:expression_statement] } }, "loop do worker.handle(socket) end")
   end
 
+  def test_control_statement
+    assert_statement :break_statement, "break"
+    assert_statement :next_statement, "next"
+  end
+
+  def test_return_statement
+    assert_statement :return_statement, "return"
+    assert_statement :return_statement, "return value"
+    assert_statement({ argument: :identifier }, "return value")
+    assert_statement({ argument: :binary_expression }, "return 1 + 2 * 4")
+  end
+
+  def test_delete_statement
+    assert_statement :delete_statement, "delete value"
+    assert_statement({ argument: :identifier }, "delete value")
+  end
+
   def test_expression_statement
     assert_statement :expression_statement, "a = 1"
     assert_statement :expression_statement, "a * b + c / 1"

@@ -3,6 +3,7 @@ require 'rbs/parser/node'
 
 module RBS
   LHS = %i(identifier member_expression)
+  INLINE_TERM = %i(EOF else elsif end when)
 
   # The parser is heavily influenced by Esprima's parser:
   # http://esprima.org/
@@ -43,8 +44,7 @@ module RBS
       when :prototype, :def, :object, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :throw, :begin
         __send__("parse_#{lookahead.name}_statement")
       when :break, :next
-        expect(lookahead.name)
-        node("#{lookahead.name}_statement")
+        node("#{lex.name}_statement")
       else
         parse_expression_statement
       end
@@ -103,6 +103,20 @@ module RBS
       expect_terminator
 
       node("#{name}_statement", test: test, consequent: block)
+    end
+
+    def parse_return_statement
+      expect(:return)
+      argument = parse_expression unless match(:LF) || match(INLINE_TERM)
+      expect_terminator
+      node(:return_statement, argument: argument)
+    end
+
+    def parse_delete_statement
+      expect(:delete)
+      argument = node(:identifier, name: expect(:identifier).value)
+      expect_terminator
+      node(:delete_statement, argument: argument)
     end
 
     # TODO: parse for statement modifier
@@ -269,7 +283,7 @@ module RBS
     end
 
     def expect_terminator
-      expect(:LF) unless match %i(EOF else elsif end when)
+      expect(:LF) unless match(INLINE_TERM)
     end
 
     def unexpected_error(token, *expected)
