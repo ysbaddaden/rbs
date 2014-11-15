@@ -40,6 +40,10 @@ class Minitest::Test
       expected.each_with_index do |expect, index|
         assert_ast expect, expression[index]
       end
+    when true
+      assert expression
+    when false
+      refute expression
     else
       flunk "unknown expected: #{expected}"
     end

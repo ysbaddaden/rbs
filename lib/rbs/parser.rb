@@ -89,12 +89,58 @@ module RBS
       if match(UNARY_OPERATOR)
         node(:unary_expression, operator: lex.value, argument: parse_expression)
       else
-        parse_primary_expression
+        parse_member_expression
       end
     end
 
-    # TODO: member_expression
-    # TODO: call_expression
+    def parse_member_expression
+      expr = parse_primary_expression
+
+      loop do
+        if match('.')
+          expect('.')
+          property = node(:identifier, name: expect(:identifier).value)
+          expr = node(:member_expression, computed: false, object: expr, property: property)
+        elsif match('[')
+          expect('[')
+          expr = node(:member_expression, computed: true, object: expr, property: parse_expression)
+          expect(']')
+        elsif match('(')
+          arguments = parse_list '(', ')', :parse_call_argument
+          expr = node(:call_expression, callee: expr, arguments: arguments)
+        else
+          break
+        end
+      end
+
+      expr
+    end
+
+    def parse_call_argument
+      if match('*')
+        expect('*')
+        node(:splat_expression, expression: parse_expression)
+      else
+        if lookahead(1) === :identifier && lookahead(2) === ':'
+          parse_object_argument
+        else
+          parse_expression
+        end
+      end
+    end
+
+    def parse_object_argument
+      properties = []
+
+      loop do
+        properties << parse_object_property
+        expect(',') if match(',')
+        break if match(')')
+      end
+
+      node(:object_expression, properties: properties)
+    end
+
     def parse_primary_expression
       case lookahead.name
       when :BOOLEAN, :NIL, :NUMBER, :REGEXP
@@ -131,7 +177,12 @@ module RBS
 
     def parse_list(before, after, method)
       list = []
-      expect(before)
+      expect(before) if before
+
+      if match(after)
+        expect(after)
+        return list
+      end
 
       loop do
         list << __send__(method)
@@ -169,7 +220,7 @@ module RBS
                 else
                   "Unexpected token #{token.name} at #{token.position}, expected one of #{expected.join(',')}"
                 end
-      raise ParseError, message
+      raise ParseError.new(message, token: token)
     end
 
     def match(type)

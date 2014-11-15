@@ -38,11 +38,13 @@ class RBS::ParserTest < Minitest::Test
   end
 
   def test_array_expression
+    assert_expression :array_expression, "[]"
     assert_expression :array_expression, "[1, 2]"
     assert_expression({ elements: %i(literal literal literal) }, "[1, 2, 3, ]")
   end
 
   def test_object_expression
+    assert_expression :object_expression, "{}"
     assert_expression :object_expression, "{ a: 1 }"
     assert_expression({ properties: %i(property property) }, "{ a: 1, b: 2, }")
     assert_expression({ properties: [{ key: :identifier, value: :literal } ] }, "{ a: 1 }")
@@ -52,6 +54,33 @@ class RBS::ParserTest < Minitest::Test
     RBS::UNARY_OPERATOR.each do |op|
       assert_expression :unary_expression, "#{op} a"
     end
+  end
+
+  def test_member_expression
+    assert_expression :member_expression, "obj.prop"
+    assert_expression :member_expression, "a.b.c"
+    assert_expression({ computed: false, object: :identifier, property: :identifier }, "obj.prop")
+    assert_expression({ computed: false, object: :member_expression, property: :identifier }, "a.b.c")
+
+    assert_expression :member_expression, "obj[prop]"
+    assert_expression({ computed: true, object: :identifier, property: :identifier }, "obj[prop]")
+    assert_expression({ computed: true, object: :identifier, property: :binary_expression }, "obj[a * b]")
+  end
+
+  def test_call_expression
+    assert_expression :call_expression, "a()"
+    assert_expression :call_expression, "obj.something()"
+    assert_expression :call_expression, "obj[something]()"
+
+    assert_expression({ callee: :identifier, arguments: [] }, "some()")
+    assert_expression({ callee: :identifier, arguments: [:identifier, :identifier] }, "some(arg1, arg2)")
+
+    assert_expression({ arguments: [:splat_expression] }, "some(*arg)")
+    assert_expression({ arguments: [:identifier, :identifier, :splat_expression] }, "some(i, j, *arg)")
+    assert_expression({ arguments: [:splat_expression, :identifier] }, "some(*arg, i)")
+
+    assert_expression({ arguments: [:object_expression] }, "some(a: 1, b: 2)")
+    assert_expression({ arguments: [:identifier, :splat_expression, :object_expression] }, "some(x, *ary, a: 1, b: 2)")
   end
 
   def test_assignment_expression
