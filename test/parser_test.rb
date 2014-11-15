@@ -20,7 +20,7 @@ class RBS::ParserTest < Minitest::Test
     assert_statement :if_statement, "if x then y end"
     assert_ast [:if_statement, :expression_statement], parse("if x then y end; a = b").body
 
-    assert_statement({ test: :identifier, consequent: { body: [:expression_statement] } }, "if x then y end")
+    assert_statement({ test: :binary_expression, consequent: { body: [:expression_statement] } }, "if x + 2 > z then y end")
 
     assert_statement :if_statement, "if x; y; else; z; end"
     assert_statement({ consequent: :block_statement, alternate: { body: [:expression_statement] } }, "if x then y else z end")
@@ -32,6 +32,30 @@ class RBS::ParserTest < Minitest::Test
     assert_statement({ alternate: :if_statement }, code)
     assert_statement({ alternate: { alternate: :if_statement } }, code)
     assert_statement({ alternate: { alternate: { alternate: :block_statement } } }, code)
+  end
+
+  def test_unless_statement
+    assert_statement :unless_statement, "unless x; y; end"
+    assert_ast [:unless_statement, :expression_statement], parse("unless x then y end; a").body
+    assert_statement({ test: :binary_expression, consequent: { body: [:expression_statement] } }, "unless x + 1 then y end")
+  end
+
+  def test_while_statement
+    assert_statement :while_statement, "while x; y; end"
+    assert_ast [:while_statement, :expression_statement], parse("while x do y end; a").body
+    assert_statement({ test: :binary_expression, consequent: { body: [:expression_statement] } }, "while x + 1 do y end")
+  end
+
+  def test_until_statement
+    assert_statement :until_statement, "until x; y; end"
+    assert_ast [:until_statement, :expression_statement], parse("until x do y end; a").body
+    assert_statement({ test: :binary_expression, consequent: { body: [:expression_statement] } }, "until x + 1 do y end")
+  end
+
+  def test_loop_statement
+    assert_statement :loop_statement, "loop; run(); end"
+    assert_ast [:loop_statement, :expression_statement], parse("loop do worker.handle(socket) end; a").body
+    assert_statement({ consequent: { body: [:expression_statement] } }, "loop do worker.handle(socket) end")
   end
 
   def test_expression_statement

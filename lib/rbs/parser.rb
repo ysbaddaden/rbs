@@ -36,31 +36,22 @@ module RBS
 
     def parse_statement
       case lookahead.name
-      when :EOF       then nil
-      when :LF        then expect(:LF); node(:empty_statement)
-      when :prototype
-      when :object
-      when :def
-      when :if        then parse_if_statement
-      when :unless
-      when :case
-      when :while
-      when :until
-      when :loop
-      when :for
-      when :delete
-      when :return
-      when :break
-      when :next
-      when :throw
-      when :begin
-      else            parse_expression_statement
+      when :EOF
+        nil
+      when :LF
+        expect(:LF); node(:empty_statement)
+      when :prototype, :def, :object, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :throw, :begin
+        __send__("parse_#{lookahead.name}_statement")
+      when :break, :next
+        expect(lookahead.name)
+        node("#{lookahead.name}_statement")
+      else
+        parse_expression_statement
       end
     end
 
     def parse_if_statement(recursive: false)
       expect(:if, :elsif)
-
       test = parse_expression
       expect(:LF, :then)
 
@@ -77,6 +68,41 @@ module RBS
       expect_terminator
 
       node(:if_statement, test: test, consequent: block, alternate: alternate)
+    end
+
+    def parse_unless_statement
+      parse_conditional(:unless, :then)
+    end
+
+    def parse_while_statement
+      parse_conditional(:while, :do)
+    end
+
+    def parse_until_statement
+      parse_conditional(:until, :do)
+    end
+
+    def parse_loop_statement
+      expect(:loop)
+      expect(:LF, :do)
+
+      block = node(:block_statement, body: parse_statements)
+      expect(:end)
+      expect_terminator
+
+      node(:loop_statement, consequent: block)
+    end
+
+    def parse_conditional(name, action)
+      expect(name)
+      test = parse_expression
+      expect(:LF, action)
+
+      block = node(:block_statement, body: parse_statements)
+      expect(:end)
+      expect_terminator
+
+      node("#{name}_statement", test: test, consequent: block)
     end
 
     # TODO: parse for statement modifier
