@@ -1,6 +1,7 @@
 module RBS
   class Node
     attr_reader :type, :params
+    undef_method :test
 
     def initialize(type, params = nil)
       @type = type.to_sym
@@ -19,13 +20,13 @@ module RBS
       end
     end
 
-    def method_missing(type, *args)
-      return params[type] if params.has_key?(type)
+    def method_missing(name, *args)
+      return params[name] if params.has_key?(name)
       super
     end
 
-    def respond_to?(type)
-      super || params.has_key?(type)
+    def respond_to?(name)
+      super || params.has_key?(name)
     end
 
     def inspect

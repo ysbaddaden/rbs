@@ -20,6 +20,22 @@ class RBS::ParserTest < Minitest::Test
     assert_statement :expression_statement, "a * b + c / 1"
   end
 
+  def test_statement_modifiers
+    assert_statement :if_statement, "tom if jerry"
+    assert_statement({ test: :call_expression, consequent: :block_statement }, "a += 1 if match(a)")
+    assert_statement({ test: :identifier, consequent: { body: [:assignment_expression] } }, "a += 1 if increment")
+
+    assert_statement :unless_statement, "tom unless jerry"
+    assert_statement({ test: :identifier, consequent: :block_statement }, "tom unless jerry")
+    assert_statement({ test: :identifier, consequent: { body: [:identifier] } }, "tom unless coyote")
+
+    assert_statement :while_statement, "tom while jerry"
+    assert_statement({ test: :identifier, consequent: :block_statement }, "tom unless jerry")
+
+    assert_statement :until_statement, "tom until jerry"
+    assert_statement({ test: :identifier, consequent: :block_statement }, "tom unless jerry")
+  end
+
   def test_primary_expression
     assert_expression :identifier, "foo"
 

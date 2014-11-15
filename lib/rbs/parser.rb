@@ -58,10 +58,20 @@ module RBS
       end
     end
 
+    # TODO: parse for statement modifier
     def parse_expression_statement
       expr = parse_expression
+
+      if match %i(if unless while until)
+        token = expect(:if, :unless, :while, :until)
+        block = node(:block_statement, body: [expr])
+        stmt = node("#{token.name}_statement", test: parse_expression, consequent: block)
+      else
+        stmt = node(:expression_statement, expression: expr)
+      end
+
       expect(:LF) unless match(:EOF)
-      node(:expression_statement, expression: expr)
+      stmt
     end
 
     def parse_expression
