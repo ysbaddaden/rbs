@@ -15,6 +15,25 @@ class RBS::ParserTest < Minitest::Test
     assert_statement :empty_statement, "\n"
   end
 
+  def test_if_statement
+    assert_statement :if_statement, "if x; y; end"
+    assert_statement :if_statement, "if x then y end"
+    assert_ast [:if_statement, :expression_statement], parse("if x then y end; a = b").body
+
+    assert_statement({ test: :identifier, consequent: { body: [:expression_statement] } }, "if x then y end")
+
+    assert_statement :if_statement, "if x; y; else; z; end"
+    assert_statement({ consequent: :block_statement, alternate: { body: [:expression_statement] } }, "if x then y else z end")
+
+    assert_statement :if_statement, "if a then b elsif c then d else e end"
+    assert_statement :if_statement, "if a then b elsif c then d elsif e then f else g end"
+
+    code = "if a then b elsif c then d elsif e then f else g end"
+    assert_statement({ alternate: :if_statement }, code)
+    assert_statement({ alternate: { alternate: :if_statement } }, code)
+    assert_statement({ alternate: { alternate: { alternate: :block_statement } } }, code)
+  end
+
   def test_expression_statement
     assert_statement :expression_statement, "a = 1"
     assert_statement :expression_statement, "a * b + c / 1"

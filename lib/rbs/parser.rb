@@ -4,6 +4,8 @@ require 'rbs/parser/node'
 module RBS
   LHS = %i(identifier member_expression)
 
+  # The parser is heavily influenced by Esprima's parser:
+  # http://esprima.org/
   class Parser
     attr_reader :lexer
 
@@ -24,6 +26,7 @@ module RBS
       statements = []
 
       loop do
+        break if match %i(end else elsif when)
         break unless statement = parse_statement
         statements << statement
       end
@@ -38,12 +41,9 @@ module RBS
       when :prototype
       when :object
       when :def
-      when :if
-      when :else
-      when :elsif
+      when :if        then parse_if_statement
       when :unless
       when :case
-      when :when
       when :while
       when :until
       when :loop
@@ -58,6 +58,27 @@ module RBS
       end
     end
 
+    def parse_if_statement(recursive: false)
+      expect(:if, :elsif)
+
+      test = parse_expression
+      expect(:LF, :then)
+
+      block = node(:block_statement, body: parse_statements)
+
+      if match(:else)
+        expect(:else)
+        alternate = node(:block_statement, body: parse_statements)
+      elsif match(:elsif)
+        alternate = parse_if_statement(recursive: true)
+      end
+
+      expect(:end) unless recursive
+      expect_terminator
+
+      node(:if_statement, test: test, consequent: block, alternate: alternate)
+    end
+
     # TODO: parse for statement modifier
     def parse_expression_statement
       expr = parse_expression
@@ -70,7 +91,7 @@ module RBS
         stmt = node(:expression_statement, expression: expr)
       end
 
-      expect(:LF) unless match(:EOF)
+      expect_terminator
       stmt
     end
 
@@ -219,6 +240,10 @@ module RBS
       lex.tap do |token|
         unexpected_error(token, *types) unless token === types
       end
+    end
+
+    def expect_terminator
+      expect(:LF) unless match %i(EOF else elsif end when)
     end
 
     def unexpected_error(token, *expected)
