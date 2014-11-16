@@ -58,6 +58,16 @@ class RBS::ParserTest < Minitest::Test
     assert_statement({ consequent: { body: [:expression_statement] } }, "loop do worker.handle(socket) end")
   end
 
+  def test_case_statement
+    assert_statement :case_statement, "case x; when 1; end"
+    assert_statement({ test: :binary_expression, cases: [:when_statement] }, "case x + 1 when 1 end")
+    assert_statement({ cases: [:when_statement, :when_statement, :when_statement] }, "case x + 1; when 1; when 2; when 3; end")
+    assert_statement({ cases: [{ tests: [:call_expression] }] }, "case x + 1; when y(); end")
+    assert_statement({ cases: [{ tests: [:identifier, :literal, :literal] }] }, "case x + 1; when y, 2, 3; z() end")
+    assert_statement({ cases: [{ consequent: :block_statement }] }, "case x + 1; when y, 2, 3; z() end")
+    assert_statement({ cases: [{ consequent: :block_statement }] }, "case x when 1 then z() end")
+  end
+
   def test_control_statement
     assert_statement :break_statement, "break"
     assert_statement :next_statement, "next"

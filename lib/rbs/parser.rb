@@ -105,6 +105,37 @@ module RBS
       node("#{name}_statement", test: test, consequent: block)
     end
 
+    def parse_case_statement
+      expect(:case)
+      test = parse_expression
+      expect(:LF) if match(:LF)
+
+      cases = []
+      loop do
+        cases << parse_when_expression
+        break if match(:end)
+      end
+
+      expect(:end)
+      expect_terminator
+
+      node(:case_statement, test: test, cases: cases)
+    end
+
+    def parse_when_expression
+      expect(:when)
+      tests = []
+
+      loop do
+        tests << parse_expression
+        break if match %i(when end)
+        break unless expect(',', :LF, :then) === ','
+      end
+
+      block = node(:block_statement, body: parse_statements) unless match %i(when end)
+      node(:when_statement, tests: tests, consequent: block)
+    end
+
     def parse_return_statement
       expect(:return)
       argument = parse_expression unless match(:LF) || match(INLINE_TERM)
@@ -278,7 +309,7 @@ module RBS
 
     def expect(*types)
       lex.tap do |token|
-        unexpected_error(token, *types) unless token === types
+        unexpected_error(token, *types.flatten) unless token === types.flatten
       end
     end
 
@@ -293,7 +324,9 @@ module RBS
                 when 1
                   "Unexpected token #{token.name} at #{token.position}, expected #{expected.first}"
                 else
-                  "Unexpected token #{token.name} at #{token.position}, expected one of #{expected.join(',')}"
+                  tokens = expected.map { |t| t.is_a?(String) ? "'#{t}'" : t }
+                  tokens.pop.tap { |t| tokens[tokens.size - 1] = "#{tokens.last} or #{t}" } if tokens.size > 1
+                  "Unexpected token #{token.name} at #{token.position}, expected one of #{tokens.join(', ')}"
                 end
       raise ParseError.new(message, token: token)
     end
