@@ -18,8 +18,8 @@ class RBS::RewriterTest < Minitest::Test
   end
 
   def test_skips_linefeeds
-    assert_tokens %w(identifier and identifier { : EOF),
-      rewriter("a and \n b { \n : \n").tokens
+    assert_tokens %w(identifier and identifier : EOF),
+      rewriter("a and \n b  : \n").tokens
   end
 
   def test_consolidates_linefeeds
@@ -28,6 +28,9 @@ class RBS::RewriterTest < Minitest::Test
   end
 
   def test_injects_defn_parens
+    assert_tokens %w(def identifier ( identifier , identifier ) LF end EOF),
+      rewriter("def x a, b; end").tokens
+
     assert_tokens %w(def identifier ( identifier = NIL ) LF return identifier + NUMBER LF end EOF),
       rewriter("def A default = nil\nreturn a + 1\n end").tokens
   end

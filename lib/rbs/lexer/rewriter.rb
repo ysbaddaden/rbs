@@ -56,6 +56,7 @@ module RBS
         when :'->'
           state.push :lambda_def
         when :';'
+          close_opened_calls(token)
           push(:LF, nil, token)
           next
         when *KEYWORDS

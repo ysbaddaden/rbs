@@ -15,6 +15,20 @@ class RBS::ParserTest < Minitest::Test
     assert_statement :empty_statement, "\n"
   end
 
+  def test_def_statement
+    assert_statement :function_statement, "def f; end"
+    assert_statement :function_statement, "def f() end"
+    assert_statement :function_statement, "def f(a, b, c) end"
+    assert_statement :function_statement, "def f a, b, c; end"
+    assert_raises(RBS::SyntaxError) { parse("def f(x, x) end") }
+
+    assert_statement :function_statement, "def f(*args) end"
+    assert_statement :function_statement, "def f(*args, options) end"
+    assert_statement :function_statement, "def f(x, *args) end"
+    assert_statement :function_statement, "def f(x, *args, options) end"
+    assert_raises(RBS::ParseError) { parse("def f(*x, *y) end") }
+  end
+
   def test_if_statement
     assert_statement :if_statement, "if x; y; end"
     assert_statement :if_statement, "if x then y end"
@@ -167,6 +181,17 @@ class RBS::ParserTest < Minitest::Test
 
     assert_expression({ arguments: [:object_expression] }, "some(a: 1, b: 2)")
     assert_expression({ arguments: [:identifier, :splat_expression, :object_expression] }, "some(x, *ary, a: 1, b: 2)")
+
+    assert_expression({ arguments: [:object_expression, :literal] }, "fn({ x: 1 }, 2)")
+    assert_raises(RBS::ParseError) { parse("fn(x: 1, 2)") }
+    assert_raises(RBS::ParseError) { parse("fn(x: 1, *args)") }
+
+    assert_expression :call_expression, "some thing"
+    assert_expression({ arguments: [:identifier] }, "some thing")
+    assert_expression({ arguments: [:identifier, :identifier] }, "some thing, more")
+    assert_expression({ arguments: [:array_expression] }, "some [1, 2]")
+    assert_expression({ arguments: [:object_expression] }, "some { thing: more }")
+    assert_expression({ arguments: [:object_expression] }, "some thing: more")
   end
 
   def test_assignment_expression

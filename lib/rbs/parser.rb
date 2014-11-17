@@ -50,6 +50,44 @@ module RBS
       end
     end
 
+    def parse_def_statement
+      expect(:def)
+      id = parse_member_expression(allow_calls: false)
+      arguments = parse_def_arguments
+      block = node(:block_statement, body: parse_statements) unless match(:end)
+      expect(:end)
+      node(:function_statement, id: id, arguments: arguments, block: block)
+    end
+
+    def parse_def_arguments
+      if match '('
+        arguments = parse_list '(', ')', &method(:parse_def_argument)
+        expect(:LF) if match(:LF)
+      else
+        arguments = parse_list nil, :LF, &method(:parse_def_argument)
+      end
+      raise SyntaxError, "duplicated argument name" if duplicated_argument?(arguments)
+      arguments
+    end
+
+    # TODO: keyword arguments
+    def parse_def_argument(list)
+      if match('*')
+        unexpected_error(lex) if list.any? { |a| a === :splat_expression }
+        expect('*')
+        token = expect(:identifier)
+        node(:splat_expression, expression: node(token))
+      else
+        token = expect(:identifier)
+        if match('=')
+          expect('=')
+          node(:identifier, name: token.value, default: parse_expression)
+        else
+          node(token)
+        end
+      end
+    end
+
     def parse_if_statement(recursive: false)
       expect(:if, :elsif)
       test = parse_expression
@@ -195,7 +233,7 @@ module RBS
       end
     end
 
-    def parse_member_expression
+    def parse_member_expression(allow_calls: true)
       expr = parse_primary_expression
 
       loop do
@@ -207,8 +245,8 @@ module RBS
           expect('[')
           expr = node(:member_expression, computed: true, object: expr, property: parse_expression)
           expect(']')
-        elsif match('(')
-          arguments = parse_list '(', ')', :parse_call_argument
+        elsif match('(') && allow_calls
+          arguments = parse_list '(', ')', &method(:parse_call_argument)
           expr = node(:call_expression, callee: expr, arguments: arguments)
         else
           break
@@ -257,12 +295,12 @@ module RBS
     end
 
     def parse_array
-      elements = parse_list('[', ']', :parse_expression)
+      elements = parse_list '[', ']', &method(:parse_expression)
       node(:array_expression, elements: elements)
     end
 
     def parse_object
-      properties = parse_list('{', '}', :parse_object_property)
+      properties = parse_list '{', '}', &method(:parse_object_property)
       node(:object_expression, properties: properties)
     end
 
@@ -277,7 +315,7 @@ module RBS
       node(:property, key: key, value: value)
     end
 
-    def parse_list(before, after, method)
+    def parse_list(before, after, &block)
       list = []
       expect(before) if before
 
@@ -287,7 +325,7 @@ module RBS
       end
 
       loop do
-        list << __send__(method)
+        list << (block.arity > 0 ? yield(list) : yield)
         token = expect(',', after)
 
         break if token === after
@@ -301,7 +339,13 @@ module RBS
 
     def node(type_or_token, params = nil)
       if type_or_token.is_a?(RBS::Token)
-        Node.new(type_or_token.name, value: type_or_token.value)
+        token = type_or_token
+
+        if token === :identifier
+          Node.new(token.name, name: token.value)
+        else
+          Node.new(token.name, value: token.value)
+        end
       else
         Node.new(type_or_token, params)
       end
@@ -348,6 +392,16 @@ module RBS
       left.type == :member_expression || (
         left.type == :identifier && left.name != 'this' && left.name != 'self'
       )
+    end
+
+    def duplicated_argument?(list)
+      names = list.map do |a|
+        case a.type
+        when :identifier       then a.name
+        when :splat_expression then a.expression.name
+        end
+      end
+      list.size != names.uniq.size
     end
   end
 end

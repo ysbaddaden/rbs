@@ -24,7 +24,7 @@ module RBS
 
   ARGUMENT = %i(
     BOOLEAN NIL NUMBER STRING REGEXP identifier
-    \( [ \{ -> not typeof new
+    \( [ { -> not typeof new
   ) # - + * ~
 
   class Lexer
