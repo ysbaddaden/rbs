@@ -7,6 +7,8 @@ module RBS
 
   # The parser is heavily influenced by Esprima's parser:
   # http://esprima.org/
+  #
+  # TODO: simplify the AST for a sexp-like (instead of GreaseMonkey)
   class Parser
     attr_reader :lexer
 
@@ -27,7 +29,7 @@ module RBS
       statements = []
 
       loop do
-        break if match %i(end else elsif when)
+        break if match %i(end else elsif when rescue ensure)
         break unless statement = parse_statement
         statements << statement
       end
@@ -35,13 +37,16 @@ module RBS
       statements
     end
 
+    # TODO: for loops
+    # TODO: object definitions
+    # TODO: prototype definitions
     def parse_statement
       case lookahead.name
       when :EOF
         nil
       when :LF
         expect(:LF); node(:empty_statement)
-      when :prototype, :def, :object, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :throw, :begin
+      when :prototype, :def, :object, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :begin
         __send__("parse_#{lookahead.name}_statement")
       when :break, :next
         node("#{lex.name}_statement")
@@ -52,10 +57,19 @@ module RBS
 
     def parse_def_statement
       expect(:def)
+
       id = parse_member_expression(allow_calls: false)
       arguments = parse_def_arguments
-      block = node(:block_statement, body: parse_statements) unless match(:end)
+      block = node(:block_statement, body: parse_statements)
+
+      handlers = parse_rescue_clauses
+      finalizer = parse_ensure_clause
       expect(:end)
+
+      if handlers.any? || finalizer
+        block = node(:try_statement, block: block, handlers: handlers, finalizer: finalizer)
+      end
+
       node(:function_statement, id: id, arguments: arguments, block: block)
     end
 
@@ -85,6 +99,55 @@ module RBS
         else
           node(token)
         end
+      end
+    end
+
+    # TODO: begin/end without rescue/ensure should be a block_statement (ie. isolated scope)
+    # TODO: else statement after exception
+    def parse_begin_statement
+      expect(:begin)
+      expect(:LF)
+
+      block = node(:block_statement, body: parse_statements)
+      handlers = parse_rescue_clauses
+      finalizer = parse_ensure_clause
+
+      expect(:end)
+      node(:try_statement, block: block, handlers: handlers, finalizer: finalizer)
+    end
+
+    def parse_rescue_clauses
+      handlers = []
+
+      loop do
+        break if match %i(ensure end)
+
+        expect(:rescue)
+        class_names = []
+
+        loop do
+          break if match %i(=> LF)
+          class_names << node(expect(:identifier))
+          break if match %i(=> LF)
+          expect(',')
+        end
+
+        if match('=>')
+          expect('=>')
+          param = node(expect(:identifier))
+        end
+
+        expect(:LF)
+        handlers << node(:catch_clause, class_names: class_names, param: param, body: parse_statements)
+      end
+
+      handlers
+    end
+
+    def parse_ensure_clause
+      if match(:ensure)
+        expect(:ensure)
+        node(:block_statement, body: parse_statements)
       end
     end
 

@@ -29,6 +29,33 @@ class RBS::ParserTest < Minitest::Test
     assert_raises(RBS::ParseError) { parse("def f(*x, *y) end") }
   end
 
+  def test_rescue_statements
+    assert_statement :try_statement, "begin;end"
+    assert_statement :try_statement, "begin;rescue;end"
+    assert_statement :try_statement, "begin;ensure;end"
+    assert_statement :try_statement, "begin;rescue;ensure;end"
+
+    assert_statement({ block: :block_statement, handlers: [:catch_clause] }, "begin; test(); rescue; end")
+    assert_statement({ block: :block_statement, handlers: [:catch_clause, :catch_clause] }, "begin; rescue; rescue; end")
+    assert_statement({ handlers: [{ body: [:expression_statement] }] }, "begin; rescue; cleanup(); end")
+    assert_statement({ finalizer: :block_statement }, "begin; ensure; cleanup(); end")
+
+    assert_statement({ handlers: [:catch_clause, :catch_clause, :catch_clause] }, "begin; rescue A; rescue B; rescue B; end")
+    assert_statement({ handlers: [{ class_names: %i(identifier) }] }, "begin; rescue A; end")
+    assert_statement({ handlers: [{ class_names: %i(identifier identifier identifier) }] }, "begin; rescue A, B, C; end")
+    assert_statement({ handlers: [{ param: :identifier }] }, "begin; rescue A, B, C => e; end")
+  end
+
+  def test_rescue_statements_in_def_statement
+    assert_statement :function_statement, "def fn; rescue; end"
+    assert_statement :function_statement, "def fn; ensure; end"
+    assert_statement :function_statement, "def fn; rescue; ensure; end"
+    assert_statement :function_statement, "def fn; rescue A; rescue B; ensure; end"
+
+    assert_statement({ block: :try_statement }, "def fn; test(); rescue; end")
+    assert_statement({ block: { handlers: [:catch_clause], finalizer: :block_statement } }, "def fn; test(); rescue; ensure; end")
+  end
+
   def test_if_statement
     assert_statement :if_statement, "if x; y; end"
     assert_statement :if_statement, "if x then y end"
