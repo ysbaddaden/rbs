@@ -29,6 +29,17 @@ class RBS::ParserTest < Minitest::Test
     assert_raises(RBS::ParseError) { parse("def f(*x, *y) end") }
   end
 
+  def test_object_statement
+    assert_statement :object_statement, "object X; end"
+    assert_statement({ id: :identifier, body: [] }, "object Name; end")
+    assert_statement({ body: [:object_statement] }, "object A; object B; end; end")
+
+    assert_statement({ body: [:function_statement, :function_statement] }, "object X; def foo; end; def bar() end end")
+    assert_statement({ body: [:property, :function_statement] }, "object X; foo = 1; def getFoo() end end")
+    assert_raises(RBS::ParseError) { parse("object X; self.foo = 1; end") }
+    assert_raises(RBS::ParseError) { parse("object X; def self.getFoo; end end") }
+  end
+
   def test_rescue_statements
     assert_statement :try_statement, "begin;end"
     assert_statement :try_statement, "begin;rescue;end"

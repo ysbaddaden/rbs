@@ -38,7 +38,6 @@ module RBS
     end
 
     # TODO: for loops
-    # TODO: object definitions
     # TODO: prototype definitions
     def parse_statement
       case lookahead.name
@@ -55,10 +54,14 @@ module RBS
       end
     end
 
-    def parse_def_statement
+    def parse_def_statement(allow_member: true)
       expect(:def)
 
-      id = parse_member_expression(allow_calls: false)
+      id = if allow_member
+             parse_member_expression(allow_calls: false)
+           else
+             expect(:identifier)
+           end
       arguments = parse_def_arguments
       block = node(:block_statement, body: parse_statements)
 
@@ -100,6 +103,37 @@ module RBS
           node(token)
         end
       end
+    end
+
+    def parse_object_statement
+      expect(:object)
+      id = parse_member_expression(allow_calls: false)
+      expect(:LF)
+
+      body = []
+
+      loop do
+        if match(:end)
+          break
+        elsif match(:object)
+          body << parse_object_statement
+          next
+        elsif match(:def)
+          body << parse_def_statement(allow_member: false)
+        elsif lookahead === :identifier
+          key = expect(:identifier)
+          expect('=')
+          body << node(:property, key: key, value: parse_expression)
+        else
+          unexpected_error(lex)
+        end
+        expect(:LF) unless match(:end)
+      end
+
+      expect(:end)
+      expect(:LF) unless match(:EOF)
+
+      node(:object_statement, id: id, body: body)
     end
 
     # TODO: begin/end without rescue/ensure should be a block_statement (ie. isolated scope)
