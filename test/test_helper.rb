@@ -2,6 +2,19 @@ require 'bundler'
 Bundler.require(:default, :test)
 
 class Minitest::Test
+  def lex(code)
+    RBS::Rewriter.new(RBS::Lexer.new(code))
+  end
+
+  def parse(code)
+    RBS::Parser.new(lex(code)).parse
+  end
+
+  def format(code, raw: true)
+    RBS::Formatter.new(RBS::Parser.new(lex(code))).compile(raw: raw)
+  end
+
+
   def assert_token(expected, actual)
     if expected.is_a?(Array)
       assert_equal expected,
@@ -55,5 +68,10 @@ class Minitest::Test
 
   def assert_statement(expected, code)
     assert_ast expected, parse(code).body.first
+  end
+
+
+  def assert_format(expected, code)
+    assert_equal expected, format(code).gsub(/\s+/, " ")
   end
 end

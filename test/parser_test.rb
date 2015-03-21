@@ -252,8 +252,4 @@ class RBS::ParserTest < Minitest::Test
       assert_expression :binary_expression, "a #{op} b"
     end
   end
-
-  def parse(code)
-    RBS::Parser.new(RBS::Rewriter.new(RBS::Lexer.new(code))).parse
-  end
 end
