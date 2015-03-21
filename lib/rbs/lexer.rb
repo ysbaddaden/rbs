@@ -249,30 +249,3 @@ module RBS
       end
   end
 end
-
-#def debug(code)
-#  lexer = Lexer.new(code)
-#
-#  #while name = lexer.lex()
-#  #  console.log("#{name} '#{lexer.yytext}' #{lexer.yyleng} #{lexer.yyline},#{lexer.yycolumn}")
-#  #end
-#
-#  console.log(lexer.tokens.map(->(t) { return t.inspect() }).join(' '))
-#  console.log("")
-#end
-
-#debug("def A(a)\nreturn a + 1\n\n\n end")
-#debug("def A default = nil\nreturn a + 1\n end")
-#debug("describe 'DSL', -> {\n  it 'must be ok', -> {\n    assert.ok true\n }\n}")
-#debug("lmbd = ->(rs) { doSomething() }")
-#debug("'I can\\'t be damned.'")
-#debug("'This is a string\nspanning on\nmultiple lines'")
-#debug('"total: #{amount} €"')
-#debug('"debug: #{hello} #{world}".test(something)')
-#debug('/azerty/i')
-#debug('# this is a comment')
-#debug("# this is a comment\n# spanning on\n# multiple lines")
-#debug("select = readkey() - 1 #comment")
-#debug("{ a: -> {},\n #comment\nb: -> {} }")
-#debug('"unknown token #{self.line},#{self.column}"')
-
