@@ -175,10 +175,19 @@ class RBS::ParserTest < Minitest::Test
     assert_expression :literal, '/\w+/'
   end
 
+  def test_group_expression
+    assert_expression :group_expression, "(1)"
+    assert_expression :group_expression, "(1 + a)"
+    assert_expression({ expression: :binary_expression }, "(1 + a)")
+    assert_expression({ left: :group_expression }, "(1 + 2) * 3")
+    assert_raises(RBS::ParseError) { assert_expression :group_expression, "()" }
+  end
+
   def test_array_expression
     assert_expression :array_expression, "[]"
     assert_expression :array_expression, "[1, 2]"
     assert_expression({ elements: %i(literal literal literal) }, "[1, 2, 3, ]")
+    assert_expression :array_expression, "[\n1\n,\n2\n]"
   end
 
   def test_object_expression

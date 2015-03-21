@@ -384,11 +384,19 @@ module RBS
                        then node(:literal, value: lex.value)
       when :STRING     then node(:literal, value: "'%s'" % lex.value)
       when :identifier then node(:identifier, name: lex.value)
+      when :'('        then parse_group_expression
       when :'['        then parse_array
       when :'{'        then parse_object
       when :'->'
       else             unexpected_error(lex)
       end
+    end
+
+    def parse_group_expression
+      expect('(')
+      expression = parse_expression
+      expect(')')
+      node(:group_expression, expression: expression)
     end
 
     def parse_array
@@ -423,6 +431,7 @@ module RBS
 
       loop do
         list << (block.arity > 0 ? yield(list) : yield)
+        expect(:LF) if match(:LF)
         token = expect(',', after)
 
         break if token === after
