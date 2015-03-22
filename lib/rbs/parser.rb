@@ -264,13 +264,18 @@ module RBS
       cases = []
       loop do
         cases << parse_when_expression
-        break if match(:end)
+        break if match %i(else end)
+      end
+
+      if match(:else)
+        expect(:else)
+        alternate = node(:block_statement, body: parse_statements)
       end
 
       expect(:end)
       expect_terminator
 
-      node(:case_statement, test: test, cases: cases)
+      node(:case_statement, test: test, cases: cases, alternate: alternate)
     end
 
     def parse_when_expression
@@ -279,11 +284,11 @@ module RBS
 
       loop do
         tests << parse_expression
-        break if match %i(when end)
+        break if match %i(when else end)
         break unless expect(',', :LF, :then) === ','
       end
 
-      block = node(:block_statement, body: parse_statements) unless match %i(when end)
+      block = node(:block_statement, body: parse_statements) unless match %i(when else end)
       node(:when_statement, tests: tests, consequent: block)
     end
 

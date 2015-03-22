@@ -118,6 +118,9 @@ class RBS::ParserTest < Minitest::Test
     assert_statement({ cases: [{ tests: [:identifier, :literal, :literal] }] }, "case x + 1; when y, 2, 3; z() end")
     assert_statement({ cases: [{ consequent: :block_statement }] }, "case x + 1; when y, 2, 3; z() end")
     assert_statement({ cases: [{ consequent: :block_statement }] }, "case x when 1 then z() end")
+
+    assert_statement :case_statement, "case x; when 1; else; end"
+    assert_statement({ alternate: :block_statement }, "case x; when 1; else; y; end")
   end
 
   def test_control_statement
