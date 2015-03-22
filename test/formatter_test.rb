@@ -101,4 +101,66 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "next;", "next"
     assert_format "break;", "break"
   end
+
+  def test_if_statement
+    assert_format "if (test) {}", "if test; end"
+    assert_format "if (a == b) {}", "if (a == b); end"
+    assert_format "if (test) { a; b; c; }", "if test; a; b; c; end"
+
+    assert_format "if (test) {} else {}", "if test; else; end"
+    assert_format "if (test) {} else { b; a; }", "if test; else; b; a; end"
+
+    assert_format "if (a) {} else if (b) {} else {}", "if a; elsif b; else; end"
+    assert_format "if (a) {} else if (b) {} else if (c) {} else {}", "if a; elsif b; elsif c; else; end"
+  end
+
+  def test_unless_statement
+    assert_format "if (!test) {}", "unless test; end"
+    assert_format "if (!test) { d; c; b; }", "unless test; d; c; b; end"
+    assert_format "if (a) {}", "unless !a; end"
+
+    assert_format "if (a > b) {}", "unless !(a > b); end"
+    assert_format "if (!(a > b)) {}", "unless (a > b); end"
+
+    assert_format "if (!(a && b)) {}", "unless a && b; end"
+    assert_format "if (!(a && !b && c)) {}", "unless a && !b && c; end"
+    assert_format "if (!((a && b) || !(c && d))) {}", "unless (a && b) || !(c && d); end"
+    assert_format "if (!(!a > b)) {}", "unless !a > b; end"
+
+    #assert_format "if (a <= b) {}", "unless a > b; end"
+    #assert_format "if (a < b) {}",  "unless a >= b; end"
+    #assert_format "if (a == b) {}", "unless a != b; end"
+    #assert_format "if (a != b) {}", "unless a == b; end"
+    #assert_format "if (a >= b) {}", "unless a < b; end"
+    #assert_format "if (a <= b) {}", "unless a > b; end"
+    #assert_format "if (a > b) {}",  "unless a <= b; end"
+    #assert_format "if (a < b) {}",  "unless a >= b; end"
+
+    #assert_format "if (!a || !b) {}", "unless a && b; end"
+    #assert_format "if (!a || b || !c) {}", "unless a && !b && c; end"
+    #assert_format "if (!(a && b) && (c && d)) {}", "unless (a && b) || !(c && d); end"
+
+    #assert_format "if (a >= b && c || !d) {}", "unless a < b || !c && d; end"
+    #assert_format "if (a != b && c != d) {}", "unless a == b || c == d; end"
+    #assert_format "if (a != b && c <= d && e > f) {}", "unless a == b || c > d || e <= f; end"
+
+    #assert_format "if (!a <= b) {}", "unless !a > b; end"
+    #assert_format "if (!a != b || c >= d) {}", "unless !a == b && c < d; end"
+  end
+
+  def test_case_statement
+    skip "todo"
+  end
+
+  def test_while_statement
+    skip "todo"
+  end
+
+  def test_until_statement
+    skip "todo"
+  end
+
+  def test_loop_statement
+    skip "todo"
+  end
 end

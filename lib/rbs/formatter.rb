@@ -18,8 +18,6 @@ module RBS
       block.map(&method(:compile_statement)).join("\n")
     end
 
-    # TODO: if_statement
-    # TODO: unless_statement
     # TODO: case_statement
     # TODO: while_statement
     # TODO: until_statement
@@ -29,7 +27,10 @@ module RBS
     # TODO: object_statement
     def compile_statement(stmt)
       case stmt.type
+      when :block_statement      then compile_block_statement(stmt)
       when :expression_statement then compile_expression(stmt.expression) + ";"
+      when :if_statement         then compile_if_statement(stmt)
+      when :unless_statement     then compile_unless_statement(stmt)
       when :return_statement     then compile_return_statement(stmt)
       when :delete_statement     then "delete #{compile_expression(stmt.argument)};"
       when :next_statement       then "next;"
@@ -39,6 +40,95 @@ module RBS
         raise "unsupported statement: #{stmt.type}"
       end
     end
+
+    def compile_block_statement(node)
+      if node.body.empty? || node.body.all? { |s| s === :empty_statement }
+        "{}"
+      else
+        "{\n#{compile_statements(node.body)}\n}"
+      end
+    end
+
+    def compile_if_statement(node)
+      test = compile_expression(ungroup_expression(node.test))
+      body = compile_statement(node.consequent)
+
+      if node.alternate
+        alternate = compile_statement(node.alternate)
+        "if (#{test}) #{body} else #{alternate}"
+      else
+        "if (#{test}) #{body}"
+      end
+    end
+
+    def compile_unless_statement(node)
+      test = compile_expression(ungroup_expression(negate(node.test)))
+      body = compile_statement(node.consequent)
+      "if (#{test}) #{body}"
+    end
+
+    def ungroup_expression(node)
+      node === :group_expression ? node.expression : node
+    end
+
+    def negation?(node)
+      node === :unary_expression && node.operator == "!"
+    end
+
+    # TODO: negate logical/binary expressions (when parser differenties & applies precedence)
+    def negate(node)
+      if negation?(node)
+        #if node.argument === :logical_expression
+        #  negate_logical_expression(node.argument)
+        #elsif node.argument === :binary_expression
+        #  negate_binary_expression(node.argument)
+        #else
+          node.argument
+        #end
+      #elsif node === :logical_expression
+      #  negate_logical_expression(node)
+      #elsif node === :binary_expression
+      #  negate_binary_expression(node)
+      elsif node === %i(identifier literal group_expression)
+        Node.new(:unary_expression, operator: "!", argument: node)
+      else
+        Node.new(:unary_expression, operator: "!", argument: Node.new(:group_expression, expression: node))
+      end
+    end
+
+    #def negate_logical_expression(node)
+    #  left = if negation?(node.left)
+    #           node.left.argument
+    #         else
+    #           Node.new(:unary_expression, operator: "!", argument: node.left)
+    #         end
+    #  right = if node.right === %i(binary_expression logical_expression) || negation?(node.right)
+    #            negate(node.right)
+    #          else
+    #           Node.new(:unary_expression, operator: "!", argument: node.right)
+    #          end
+    #  operator = node.operator == "&&" ? "||" : "&&"
+    #  Node.new(:logical_expression, operator: operator, left: left, right: right)
+    #end
+
+    #def negate_binary_expression(node)
+    #  right = if node.right === :logical_expression
+    #            negate_logical_expression(node.right)
+    #          elsif node.right === :binary_expression
+    #            negate_binary_expression(node.right)
+    #          else
+    #            node.right
+    #          end
+    #  operator = case node.operator
+    #             when "==" then "!="
+    #             when "!=" then "=="
+    #             when ">=" then "<"
+    #             when "<=" then ">"
+    #             when ">"  then "<="
+    #             when "<"  then ">="
+    #             end
+    #  Node.new(:binary_expression, operator: operator, left: node.left, right: right)
+    #end
 
     def compile_return_statement(node)
       if node.argument

@@ -325,6 +325,8 @@ module RBS
       end
     end
 
+    # TODO: differentiate logical from binary expressions
+    # TODO: apply operator precedence (logical > binary)
     def parse_binary_expression
       left = parse_unary_expression
 
