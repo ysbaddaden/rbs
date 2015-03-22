@@ -254,5 +254,7 @@ class RBS::ParserTest < Minitest::Test
     RBS::BINARY_OPERATOR.each do |op|
       assert_expression :binary_expression, "a #{op} b"
     end
+    assert_expression :binary_expression, "a == !b"
+    assert_expression :binary_expression, "!a == b"
   end
 end

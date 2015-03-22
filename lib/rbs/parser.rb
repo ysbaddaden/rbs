@@ -337,7 +337,7 @@ module RBS
 
     def parse_unary_expression
       if match(UNARY_OPERATOR)
-        node(:unary_expression, operator: lex.value, argument: parse_expression)
+        node(:unary_expression, operator: lex.value, argument: parse_member_expression)
       else
         parse_member_expression
       end
