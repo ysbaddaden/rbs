@@ -133,8 +133,11 @@ class RBS::ParserTest < Minitest::Test
   end
 
   def test_delete_statement
-    assert_statement :delete_statement, "delete value"
-    assert_statement({ argument: :identifier }, "delete value")
+    assert_statement({ argument: :member_expression }, "delete a.b")
+    assert_statement({ argument: :member_expression }, "delete a[b]")
+    assert_raises(RBS::SyntaxError) { parse("delete value") }
+    assert_raises(RBS::SyntaxError) { parse("delete a()") }
+    assert_raises(RBS::SyntaxError) { parse("delete 1") }
   end
 
   def test_expression_statement

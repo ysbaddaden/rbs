@@ -77,13 +77,19 @@ module RBS
     end
 
     def parse_def_arguments
+      position_token = lookahead
+
       if match '('
         arguments = parse_list '(', ')', &method(:parse_def_argument)
         expect(:LF) if match(:LF)
       else
         arguments = parse_list nil, :LF, &method(:parse_def_argument)
       end
-      raise SyntaxError, "duplicated argument name" if duplicated_argument?(arguments)
+
+      if duplicated_argument?(arguments)
+        syntax_error("duplicated argument name", position_token)
+      end
+
       arguments
     end
 
@@ -280,7 +286,13 @@ module RBS
 
     def parse_delete_statement
       expect(:delete)
-      argument = node(:identifier, name: expect(:identifier).value)
+      position_token = lookahead
+      argument = parse_member_expression(allow_calls: false)
+
+      unless argument === :member_expression
+        syntax_error("Expected member expression but got #{argument.type}", position_token)
+      end
+
       expect_terminator
       node(:delete_statement, argument: argument)
     end
@@ -302,10 +314,11 @@ module RBS
     end
 
     def parse_expression
+      position_token = lookahead
       left = parse_binary_expression
 
       if match(ASSIGNMENT_OPERATOR)
-        raise ParseError, "Invalid left-hand side in assignment" unless valid_lhs?(left)
+        syntax_error("Invalid left-hand side in assignment", position_token) unless valid_lhs?(left)
         node(:assignment_expression, operator: lex.value, left: left, right: parse_expression)
       else
         left
@@ -443,6 +456,7 @@ module RBS
 
     private
 
+    # TODO: attach position to nodes (eg: to generate source maps)
     def node(type_or_token, params = nil)
       if type_or_token.is_a?(RBS::Token)
         token = type_or_token
@@ -465,6 +479,10 @@ module RBS
 
     def expect_terminator
       expect(:LF) unless match(INLINE_TERM)
+    end
+
+    def syntax_error(message, token)
+      raise SyntaxError.new("#{message} at #{token.position}")
     end
 
     def unexpected_error(token, *expected)
