@@ -98,7 +98,7 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_loop_flow_statements
-    assert_format "next;", "next"
+    assert_format "continue;", "next"
     assert_format "break;", "break"
   end
 
@@ -149,7 +149,10 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_case_statement
-    skip "todo"
+    assert_format "switch (x) { case 1: break; case 2: case 3: break; }", "case x; when 1; when 2, 3; end"
+    assert_format "switch (x) { case 1: some(); break; case 2: case 3: thing(); more(); break; }", "case x; when 1; some(); when 2, 3; thing(); more(); end"
+    assert_format "switch (x) { case 1: break; default: y; }", "case x; when 1; else; y; end"
+    assert_format "switch (x) { case 1: return; default: y; }", "case x; when 1; return; else; y; end"
   end
 
   def test_while_statement

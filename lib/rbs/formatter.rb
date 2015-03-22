@@ -18,7 +18,6 @@ module RBS
       block.map(&method(:compile_statement)).join("\n")
     end
 
-    # TODO: case_statement
     # TODO: def_statement
     # TODO: begin_statement
     # TODO: object_statement
@@ -28,12 +27,13 @@ module RBS
       when :expression_statement then compile_expression(stmt.expression) + ";"
       when :if_statement         then compile_if_statement(stmt)
       when :unless_statement     then compile_unless_statement(stmt)
+      when :case_statement       then compile_case_statement(stmt)
       when :while_statement      then compile_while_statement(stmt)
       when :until_statement      then compile_until_statement(stmt)
       when :loop_statement       then compile_loop_statement(stmt)
       when :return_statement     then compile_return_statement(stmt)
       when :delete_statement     then "delete #{compile_expression(stmt.argument)};"
-      when :next_statement       then "next;"
+      when :next_statement       then "continue;"
       when :break_statement      then "break;"
       when :empty_statement      then # skip
       else
@@ -65,6 +65,32 @@ module RBS
       test = compile_expression(ungroup_expression(negate(node.test)))
       body = compile_statement(node.consequent)
       "if (#{test}) #{body}"
+    end
+
+    # FIXME: avoid unreachable breaks (eg: returning case blocks)
+    def compile_case_statement(node)
+      test = compile_expression(ungroup_expression(node.test))
+
+      body = node.cases.map do |case_|
+        tests = case_.tests.map { |t| "case " + compile_expression(t) + ":" }.join("\n")
+
+        if case_.consequent
+          block = compile_statements(case_.consequent.body)
+          if case_.consequent.body.last === :return_statement
+            "#{tests}\n#{block}"
+          else
+            "#{tests}\n#{block}\nbreak;"
+          end
+        else
+          "#{tests}\nbreak;"
+        end
+      end
+
+      if node.alternate
+        body << "default:\n" + compile_statements(node.alternate.body)
+      end
+
+      "switch (#{test}) {\n#{body.join("\n")}\n}"
     end
 
     def compile_while_statement(node)
