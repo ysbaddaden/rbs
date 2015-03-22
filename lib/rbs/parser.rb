@@ -39,19 +39,29 @@ module RBS
 
     # TODO: for loops
     # TODO: prototype definitions
+    # TODO: parse for statement modifier
     def parse_statement
-      case lookahead.name
-      when :EOF
-        nil
-      when :LF
-        expect(:LF); node(:empty_statement)
-      when :prototype, :def, :object, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :begin
-        __send__("parse_#{lookahead.name}_statement")
-      when :break, :next
-        node("#{lex.name}_statement")
-      else
-        parse_expression_statement
+      stmt = case lookahead.name
+             when :EOF
+               return nil
+             when :LF
+               expect(:LF)
+               return node(:empty_statement)
+             when :prototype, :def, :object, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :begin
+               __send__("parse_#{lookahead.name}_statement")
+             when :break, :next
+               node("#{lex.name}_statement")
+             else
+               return parse_expression_statement
+             end
+
+      if match %i(if unless while until)
+        token = expect(:if, :unless, :while, :until)
+        block = node(:block_statement, body: [stmt])
+        stmt = node("#{token.name}_statement", test: parse_expression, consequent: block, alternate: nil)
       end
+
+      stmt
     end
 
     def parse_def_statement(allow_member: true)
@@ -279,8 +289,11 @@ module RBS
 
     def parse_return_statement
       expect(:return)
-      argument = parse_expression unless match(:LF) || match(INLINE_TERM)
-      expect_terminator
+
+      unless match %i(if unless while until)
+        argument = parse_expression unless match(:LF) || match(INLINE_TERM)
+        expect_terminator
+      end
       node(:return_statement, argument: argument)
     end
 
@@ -293,7 +306,7 @@ module RBS
         syntax_error("Expected member expression but got #{argument.type}", position_token)
       end
 
-      expect_terminator
+      expect_terminator unless match %i(if unless while until)
       node(:delete_statement, argument: argument)
     end
 
@@ -304,7 +317,7 @@ module RBS
       if match %i(if unless while until)
         token = expect(:if, :unless, :while, :until)
         block = node(:block_statement, body: [expr])
-        stmt = node("#{token.name}_statement", test: parse_expression, consequent: block)
+        stmt = node("#{token.name}_statement", test: parse_expression, consequent: block, alternate: nil)
       else
         stmt = node(:expression_statement, expression: expr)
       end
