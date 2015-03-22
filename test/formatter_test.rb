@@ -153,14 +153,27 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_while_statement
-    skip "todo"
+    assert_format "while (test) {}", "while test; end"
+    assert_format "while (a == b) {}", "while (a == b); end"
+    assert_format "while (test) { a; b; c; }", "while test; a; b; c; end"
   end
 
   def test_until_statement
-    skip "todo"
+    assert_format "while (!test) {}", "until test; end"
+    assert_format "while (!test) { d; c; b; }", "until test; d; c; b; end"
+    assert_format "while (a) {}", "until !a; end"
+
+    assert_format "while (a > b) {}", "until !(a > b); end"
+    assert_format "while (!(a > b)) {}", "until (a > b); end"
+
+    assert_format "while (!(a && b)) {}", "until a && b; end"
+    assert_format "while (!(a && !b && c)) {}", "until a && !b && c; end"
+    assert_format "while (!((a && b) || !(c && d))) {}", "until (a && b) || !(c && d); end"
+    assert_format "while (!(!a > b)) {}", "until !a > b; end"
   end
 
   def test_loop_statement
-    skip "todo"
+    assert_format "while (1) {}", "loop; end"
+    assert_format "while (1) { if (t()) { break; } }", "loop; break if t(); end"
   end
 end
