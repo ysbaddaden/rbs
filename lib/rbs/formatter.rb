@@ -8,7 +8,7 @@ module RBS
 
     def compile(raw: false)
       "".tap do |code|
-        code << "(function () {\n" unless raw
+        code << "(function () {\n'use strict';" unless raw
         code << compile_statements(@parser.parse.body)
         code << "\n}());" unless raw
       end
@@ -18,10 +18,6 @@ module RBS
       block.map(&method(:compile_statement)).join("\n")
     end
 
-    # TODO: return_statement
-    # TODO: delete_statement
-    # TODO: next_statement
-    # TODO: break_statement
     # TODO: if_statement
     # TODO: unless_statement
     # TODO: case_statement
@@ -34,9 +30,21 @@ module RBS
     def compile_statement(stmt)
       case stmt.type
       when :expression_statement then compile_expression(stmt.expression) + ";"
+      when :return_statement     then compile_return_statement(stmt)
+      when :delete_statement     then "delete #{compile_expression(stmt.argument)};"
+      when :next_statement       then "next;"
+      when :break_statement      then "break;"
       when :empty_statement      then # skip
       else
         raise "unsupported statement: #{stmt.type}"
+      end
+    end
+
+    def compile_return_statement(node)
+      if node.argument
+        "return #{compile_expression(node.argument)};"
+      else
+        "return;"
       end
     end
 

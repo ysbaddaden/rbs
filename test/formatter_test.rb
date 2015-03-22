@@ -85,4 +85,20 @@ class RBS::FormatterTest < Minitest::Test
       assert_format "a #{op} b;", "a #{op} b"
     end
   end
+
+  def test_return_statement
+    assert_format "return;", "return"
+    assert_format "return a;", "return a"
+    assert_format "return (d);", "return (d)"
+  end
+
+  def test_delete_statement
+    assert_format "delete a.b.c;", "delete a.b.c"
+    assert_format "delete a[b];", "delete a[b]"
+  end
+
+  def test_loop_flow_statements
+    assert_format "next;", "next"
+    assert_format "break;", "break"
+  end
 end
