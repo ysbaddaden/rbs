@@ -179,4 +179,58 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "while (1) {}", "loop; end"
     assert_format "while (1) { if (t()) { break; } }", "loop; break if t(); end"
   end
+
+  def test_rescue_statement
+    ex = "__rbs_exception"
+
+    assert_format "try { x; } catch (#{ex}) { throw #{ex}; }",
+      "begin; x; end"
+
+    assert_format "try { x; } catch (#{ex}) {}",
+      "begin; x; rescue; end"
+
+    assert_format "try { x; } catch (#{ex}) { y; }",
+      "begin; x; rescue; y; end"
+
+    assert_format "try { x; } catch (#{ex}) { if (#{ex} instanceof A) {} else { throw #{ex}; } }",
+      "begin; x; rescue A; end"
+
+    assert_format "try { x; } catch (#{ex}) { if (#{ex} instanceof A) {} else if (#{ex} instanceof B) {} else { throw #{ex}; } }",
+      "begin; x; rescue A; rescue B; end"
+
+    assert_format "try { x; } catch (#{ex}) { if (#{ex} instanceof A || #{ex} instanceof B) {} else { throw #{ex}; } }",
+      "begin; x; rescue A, B; end"
+
+    assert_format "try { x; } catch (#{ex}) { if (#{ex} instanceof C) {} else {} }",
+      "begin; x; rescue C; rescue; end"
+
+    assert_format "try { x; } catch (#{ex}) { if (#{ex} instanceof D) {} else { y; } }",
+      "begin; x; rescue D; rescue; y; end"
+  end
+
+  def test_exception_var_in_rescue_statements
+    ex = "__rbs_exception"
+
+    assert_format "try { x; } catch (ex) { y(ex); }",
+      "begin; x; rescue => ex; y(ex); end"
+
+    assert_format "try { x; } catch (exc) { if (exc instanceof A) {} else if (exc instanceof B) {} else { throw exc; } }",
+      "begin; x; rescue A => exc; rescue B => exc; end"
+
+    assert_format "try { x; } catch (#{ex}) { var ex1, ex2; if (#{ex} instanceof A) {} else if (#{ex} instanceof B) {} else { throw #{ex}; } }",
+      "begin; x; rescue A => ex1; rescue B => ex2; end"
+
+    assert_format "try { x; } catch (#{ex}) { var e1, e2; if (#{ex} instanceof A) { e1 = #{ex}; y(e1); } else if (#{ex} instanceof B) { e2 = #{ex}; y(e2); } else { throw #{ex}; } }",
+      "begin; x; rescue A => e1; y(e1); rescue B => e2; y(e2); end"
+  end
+
+  def test_ensure_in_rescue_statements
+    ex = "__rbs_exception"
+
+    assert_format "try { x; } finally {}",
+      "begin; x; ensure; end"
+
+    assert_format "try { x; } catch (#{ex}) {} finally { y; }",
+      "begin; x; rescue; ensure; y; end"
+  end
 end

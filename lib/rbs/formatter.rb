@@ -31,6 +31,7 @@ module RBS
       when :while_statement      then compile_while_statement(stmt)
       when :until_statement      then compile_until_statement(stmt)
       when :loop_statement       then compile_loop_statement(stmt)
+      when :try_statement        then compile_try_statement(stmt)
       when :return_statement     then compile_return_statement(stmt)
       when :delete_statement     then "delete #{compile_expression(stmt.argument)};"
       when :next_statement       then "continue;"
@@ -67,7 +68,6 @@ module RBS
       "if (#{test}) #{body}"
     end
 
-    # FIXME: avoid unreachable breaks (eg: returning case blocks)
     def compile_case_statement(node)
       test = compile_expression(ungroup_expression(node.test))
 
@@ -110,6 +110,90 @@ module RBS
       "while (1) #{body}"
     end
 
+    def compile_try_statement(node)
+      exception = "__rbs_exception"
+      exceptions = nil
+      body = compile_statement(node.block)
+      finalizer = " finally #{compile_statement(node.finalizer)}" if node.finalizer
+
+      if node.handlers.empty? && node.finalizer
+        return "try #{body}#{finalizer}"
+      end
+
+      handlers = case node.handlers.size
+                 when 0
+                   "throw #{exception};" unless node.finalizer
+                 when 1
+                   handler = node.handlers.first
+                   exception = handler.param.name if handler.param
+                   compile_catch_clause(handler, exception)
+                 else
+                   params = node.handlers.map(&:param).uniq { |param| param && param.name }.compact
+                   case params.size
+                   when 0 then # skip
+                   when 1 then exception = params.first.name
+                   else        exceptions = "var " + params.map(&:name).join(", ") + "; "
+                   end
+                   compile_catch_clauses(node.handlers, exception)
+                 end
+
+      handlers = if handlers.nil?
+                   nil
+                 elsif handlers.empty?
+                   "{}"
+                 else
+                   "{ #{exceptions}#{handlers} }"
+                 end
+
+      "try #{body} catch (#{exception}) #{handlers}#{finalizer}"
+    end
+
+    def compile_catch_clause(handler, exception)
+      body = if handler.body.any?
+                compile_statements(handler.body)
+              else
+                ""
+              end
+
+      if handler.class_names.any?
+        test = handler.class_names
+          .map { |id| "#{exception} instanceof #{id.name}" }
+          .join(" || ")
+        body = body.empty? ? "{}" : "{ #{body} }"
+        "if (#{test}) #{body} else { throw #{exception}; }"
+      else
+        body
+      end
+    end
+
+    def compile_catch_clauses(handlers, exception)
+      conditions = handlers.map do |handler|
+        ex = if handler.param && handler.param.name != exception
+               " #{handler.param.name} = #{exception};"
+             else
+               ""
+             end
+
+        body = if handler.body.any?
+                  "{" + ex + " " + compile_statements(handler.body) + " }"
+                else
+                  "{}"
+                end
+
+        if handler.class_names.any?
+          test = handler.class_names.map { |id| "#{exception} instanceof #{id.name}" }.join(" || ")
+          "if (#{test}) #{body}"
+        else
+          body
+        end
+      end
+
+      if handlers.any? { |handler| handler.class_names.empty? }
+        conditions.join(" else ")
+      else
+        conditions.join(" else ") + " else { throw #{exception}; }"
+      end
+    end
 
     def compile_return_statement(node)
       if node.argument
