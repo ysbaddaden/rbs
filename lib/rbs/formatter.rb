@@ -32,6 +32,7 @@ module RBS
       when :until_statement      then compile_until_statement(stmt)
       when :loop_statement       then compile_loop_statement(stmt)
       when :try_statement        then compile_try_statement(stmt)
+      when :function_statement   then compile_function_statement(stmt)
       when :return_statement     then compile_return_statement(stmt)
       when :delete_statement     then "delete #{compile_expression(stmt.argument)};"
       when :next_statement       then "continue;"
@@ -192,6 +193,40 @@ module RBS
         conditions.join(" else ")
       else
         conditions.join(" else ") + " else { throw #{exception}; }"
+      end
+    end
+
+    def compile_function_statement(node)
+      name = compile_expression(node.id)
+      splats, args = [], []
+
+      node.arguments.each_with_index do |arg, index|
+        if arg === :splat_expression
+          splats << if index == 0 && node.arguments.size == 1
+                      "var #{compile_expression(arg.expression)} = Array.prototype.slice.call(arguments);"
+                    elsif index == node.arguments.size - 1
+                      "var #{compile_expression(arg.expression)} = Array.prototype.slice.call(arguments, #{index});"
+                    else
+                      len = index - node.arguments.size + 1
+                      "var #{compile_expression(arg.expression)} = Array.prototype.slice.call(arguments, #{index}, #{len});"
+                    end
+        elsif splats.any?
+          splats << "var #{compile_expression(arg)} = arguments[arguments.length - #{node.arguments.size - index}];"
+        else
+          args << compile_expression(arg)
+        end
+      end
+
+      body = if splats.any?
+               "{ " + splats.join(" ") + compile_statements(node.block.body) + " }"
+             else
+               compile_statement(node.block)
+             end
+
+      if node.id === :identifier
+        "function #{name}(#{args.join(', ')}) #{body}"
+      else
+        "#{name} = function (#{args.join(', ')}) #{body}"
       end
     end
 
