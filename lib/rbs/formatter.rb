@@ -18,8 +18,6 @@ module RBS
       block.map(&method(:compile_statement)).join("\n")
     end
 
-    # TODO: def_statement
-    # TODO: begin_statement
     # TODO: object_statement
     def compile_statement(stmt)
       case stmt.type
@@ -198,7 +196,23 @@ module RBS
 
     def compile_function_statement(node)
       name = compile_expression(node.id)
-      splats, args = [], []
+      splats, args, defaults = compile_function_arguments(node)
+
+      body = if splats.any? || defaults.any?
+               "{ " + (splats + defaults).join(" ") + " " + compile_statements(node.block.body) + " }"
+             else
+               compile_statement(node.block)
+             end
+
+      if node.id === :identifier
+        "function #{name}(#{args.join(', ')}) #{body}"
+      else
+        "#{name} = function (#{args.join(', ')}) #{body}"
+      end
+    end
+
+    def compile_function_arguments(node)
+      splats, args, defaults = [], [], []
 
       node.arguments.each_with_index do |arg, index|
         if arg === :splat_expression
@@ -210,24 +224,22 @@ module RBS
                       len = index - node.arguments.size + 1
                       "var #{compile_expression(arg.expression)} = Array.prototype.slice.call(arguments, #{index}, #{len});"
                     end
-        elsif splats.any?
-          splats << "var #{compile_expression(arg)} = arguments[arguments.length - #{node.arguments.size - index}];"
         else
-          args << compile_expression(arg)
+          if splats.any?
+            splats << "var #{compile_expression(arg)} = arguments[arguments.length - #{node.arguments.size - index}];"
+          else
+            args << compile_expression(arg)
+          end
+
+          if arg.default
+            arg_name = compile_expression(arg)
+            default_value = compile_expression(arg.default)
+            defaults << "if (#{arg_name} === undefined) #{arg_name} = #{default_value};"
+          end
         end
       end
 
-      body = if splats.any?
-               "{ " + splats.join(" ") + compile_statements(node.block.body) + " }"
-             else
-               compile_statement(node.block)
-             end
-
-      if node.id === :identifier
-        "function #{name}(#{args.join(', ')}) #{body}"
-      else
-        "#{name} = function (#{args.join(', ')}) #{body}"
-      end
+      [splats, args, defaults]
     end
 
     def compile_return_statement(node)

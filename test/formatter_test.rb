@@ -237,13 +237,14 @@ class RBS::FormatterTest < Minitest::Test
   def test_function_statement
     assert_format "function a() {}", "def a; end"
     assert_format "function a() { y; z; }", "def a; y; z; end"
+    assert_format "function a(b, c, d) {}", "def a(b, c, d) end"
 
     assert_format "a.b.c.d = function () {}", "def a.b.c.d; end"
     assert_format "a[x] = function () {}", "def a[x]; end"
     assert_format "a[0].z = function () {}", "def a[0].z; end"
+  end
 
-    assert_format "function a(b, c, d) {}", "def a(b, c, d) end"
-
+  def test_argument_splats_in_function_statements
     assert_format "function a() { var b = Array.prototype.slice.call(arguments); }",
       "def a(*b) end"
 
@@ -252,5 +253,19 @@ class RBS::FormatterTest < Minitest::Test
 
     assert_format "function a(b) { var d = Array.prototype.slice.call(arguments, 1, -1); var e = arguments[arguments.length - 1]; }",
       "def a(b, *d, e) end"
+  end
+
+  def test_default_argument_in_function_statements
+    assert_format "function x(a) { if (a === undefined) a = 'b'; log(a); }",
+      "def x(a = 'b') log(a); end"
+
+    assert_format "function x(a) { if (a === undefined) a = 'b'; }",
+      "def x(a = 'b') end"
+
+    assert_format "function x(a, b, c) { if (c === undefined) c = 2; }",
+      "def x(a, b, c = 2) end"
+
+    assert_format "function x(a, b, c, d) { if (c === undefined) c = 2; if (d === undefined) d = 3; }",
+      "def x(a, b, c = 2, d = 3) end"
   end
 end

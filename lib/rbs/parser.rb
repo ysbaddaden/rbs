@@ -116,7 +116,7 @@ module RBS
           expect('=')
           node(:identifier, name: token.value, default: parse_expression)
         else
-          node(token)
+          node(:identifier, name: token.value, default: nil)
         end
       end
     end
