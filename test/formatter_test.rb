@@ -239,9 +239,9 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "function a() { y; z; }", "def a; y; z; end"
     assert_format "function a(b, c, d) {}", "def a(b, c, d) end"
 
-    assert_format "a.b.c.d = function () {}", "def a.b.c.d; end"
-    assert_format "a[x] = function () {}", "def a[x]; end"
-    assert_format "a[0].z = function () {}", "def a[0].z; end"
+    assert_format "a.b.c.d = function () {};", "def a.b.c.d; end"
+    assert_format "a[x] = function () {};", "def a[x]; end"
+    assert_format "a[0].z = function () {};", "def a[0].z; end"
   end
 
   def test_argument_splats_in_function_statements
@@ -267,5 +267,16 @@ class RBS::FormatterTest < Minitest::Test
 
     assert_format "function x(a, b, c, d) { if (c === undefined) c = 2; if (d === undefined) d = 3; }",
       "def x(a, b, c = 2, d = 3) end"
+  end
+
+  def test_object_statement
+    assert_format "var A = {};", "object A; end"
+    assert_format "var A = {}; A.B = {};", "object A; object B; end; end"
+
+    assert_format "var A = {}; A.foo = 'bar'; A.baz = function () { return this.foo; };",
+      "object A; foo = 'bar'; def baz; return this.foo; end; end;"
+
+    assert_format "var A = {}; A.B = {}; A.B.foo = 'bar'; A.B.baz = function () { return this.foo; };",
+      "object A; object B; foo = 'bar'; def baz; return this.foo; end; end; end"
   end
 end

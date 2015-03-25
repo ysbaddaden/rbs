@@ -18,7 +18,6 @@ module RBS
       block.map(&method(:compile_statement)).join("\n")
     end
 
-    # TODO: object_statement
     def compile_statement(stmt)
       case stmt.type
       when :block_statement      then compile_block_statement(stmt)
@@ -31,6 +30,7 @@ module RBS
       when :loop_statement       then compile_loop_statement(stmt)
       when :try_statement        then compile_try_statement(stmt)
       when :function_statement   then compile_function_statement(stmt)
+      when :object_statement     then compile_object_statement(stmt)
       when :return_statement     then compile_return_statement(stmt)
       when :delete_statement     then "delete #{compile_expression(stmt.argument)};"
       when :next_statement       then "continue;"
@@ -194,8 +194,14 @@ module RBS
       end
     end
 
-    def compile_function_statement(node)
-      name = compile_expression(node.id)
+    def compile_function_statement(node, parent: nil)
+      id = if parent
+             Node.new(:member_expression, object: parent, property: node.id, computed: false)
+           else
+             node.id
+           end
+      name = compile_expression(id)
+
       splats, args, defaults = compile_function_arguments(node)
 
       body = if splats.any? || defaults.any?
@@ -204,10 +210,10 @@ module RBS
                compile_statement(node.block)
              end
 
-      if node.id === :identifier
+      if id === :identifier
         "function #{name}(#{args.join(', ')}) #{body}"
       else
-        "#{name} = function (#{args.join(', ')}) #{body}"
+        "#{name} = function (#{args.join(', ')}) #{body};"
       end
     end
 
@@ -240,6 +246,31 @@ module RBS
       end
 
       [splats, args, defaults]
+    end
+
+    def compile_object_statement(node, parent: nil)
+      id = if parent
+             Node.new(:member_expression, object: parent, property: node.id, computed: false)
+           else
+             node.id
+           end
+      name = compile_expression(id)
+
+      body = node.body.map do |stmt|
+        case stmt.type
+        when :object_statement   then compile_object_statement(stmt, parent: id)
+        when :function_statement then compile_function_statement(stmt, parent: id)
+        when :property           then "#{name}.#{compile_expression(stmt.key)} = #{compile_expression(stmt.value)};"
+        else
+          raise "unsupported object body statement"
+        end
+      end
+
+      if id === :identifier
+        "var #{name} = {}; #{body.join(" ")}"
+      else
+        "#{name} = {}; #{body.join(" ")}"
+      end
     end
 
     def compile_return_statement(node)

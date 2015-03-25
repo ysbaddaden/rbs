@@ -1,3 +1,4 @@
+require 'pp'
 require 'bundler'
 Bundler.require(:default, :test)
 
@@ -72,6 +73,6 @@ class Minitest::Test
 
 
   def assert_format(expected, code)
-    assert_equal expected, format(code).gsub(/\s+/, " ")
+    assert_equal expected, format(code).gsub(/\s+/, " ").strip()
   end
 end

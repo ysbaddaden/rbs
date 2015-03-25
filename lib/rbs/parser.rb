@@ -70,7 +70,7 @@ module RBS
       id = if allow_member
              parse_member_expression(allow_calls: false)
            else
-             expect(:identifier)
+             node(expect(:identifier))
            end
       arguments = parse_def_arguments
       block = node(:block_statement, body: parse_statements)
@@ -139,7 +139,7 @@ module RBS
         elsif lookahead === :identifier
           key = expect(:identifier)
           expect('=')
-          body << node(:property, key: key, value: parse_expression)
+          body << node(:property, key: node(key), value: parse_expression)
         else
           unexpected_error(lex)
         end
