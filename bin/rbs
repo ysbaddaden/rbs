@@ -5,8 +5,10 @@ require 'rbs/lexer'
 require 'rbs/lexer/rewriter'
 require 'rbs/parser'
 require 'rbs/formatter'
+require 'rbs/indenter'
 
 lexer = RBS::Rewriter.new(RBS::Lexer.new(ARGF.read))
 parser = RBS::Parser.new(lexer)
 formatter = RBS::Formatter.new(parser)
-puts formatter.compile
+indenter = RBS::Indenter.new(formatter)
+puts indenter.compile(raw: false, spaces: 2)

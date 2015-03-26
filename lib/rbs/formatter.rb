@@ -8,7 +8,7 @@ module RBS
 
     def compile(raw: false)
       "".tap do |code|
-        code << "(function () {\n'use strict';" unless raw
+        code << "(function () {\n'use strict';\n\n" unless raw
         code << compile_statements(@parser.parse.body)
         code << "\n}());" unless raw
       end
@@ -113,7 +113,7 @@ module RBS
       exception = "__rbs_exception"
       exceptions = nil
       body = compile_statement(node.block)
-      finalizer = " finally #{compile_statement(node.finalizer)}" if node.finalizer
+      finalizer = "\nfinally #{compile_statement(node.finalizer)}" if node.finalizer
 
       if node.handlers.empty? && node.finalizer
         return "try #{body}#{finalizer}"
@@ -131,7 +131,7 @@ module RBS
                    case params.size
                    when 0 then # skip
                    when 1 then exception = params.first.name
-                   else        exceptions = "var " + params.map(&:name).join(", ") + "; "
+                   else        exceptions = "var " + params.map(&:name).join(", ") + ";\n"
                    end
                    compile_catch_clauses(node.handlers, exception)
                  end
@@ -141,7 +141,7 @@ module RBS
                  elsif handlers.empty?
                    "{}"
                  else
-                   "{ #{exceptions}#{handlers} }"
+                   "{\n#{exceptions}#{handlers}\n}"
                  end
 
       "try #{body} catch (#{exception}) #{handlers}#{finalizer}"
@@ -158,8 +158,8 @@ module RBS
         test = handler.class_names
           .map { |id| "#{exception} instanceof #{id.name}" }
           .join(" || ")
-        body = body.empty? ? "{}" : "{ #{body} }"
-        "if (#{test}) #{body} else { throw #{exception}; }"
+        body = body.empty? ? "{}" : "{\n#{body}\n}"
+        "if (#{test}) #{body} else {\nthrow #{exception};\n}"
       else
         body
       end
@@ -168,13 +168,13 @@ module RBS
     def compile_catch_clauses(handlers, exception)
       conditions = handlers.map do |handler|
         ex = if handler.param && handler.param.name != exception
-               " #{handler.param.name} = #{exception};"
+               "#{handler.param.name} = #{exception};\n"
              else
                ""
              end
 
         body = if handler.body.any?
-                  "{" + ex + " " + compile_statements(handler.body) + " }"
+                  "{\n" + ex + compile_statements(handler.body) + "\n}"
                 else
                   "{}"
                 end
@@ -190,7 +190,7 @@ module RBS
       if handlers.any? { |handler| handler.class_names.empty? }
         conditions.join(" else ")
       else
-        conditions.join(" else ") + " else { throw #{exception}; }"
+        conditions.join(" else ") + " else {\nthrow #{exception};\n}"
       end
     end
 
@@ -205,7 +205,7 @@ module RBS
       splats, args, defaults = compile_function_arguments(node)
 
       body = if splats.any? || defaults.any?
-               "{ " + (splats + defaults).join(" ") + " " + compile_statements(node.block.body) + " }"
+               "{\n" + (splats + defaults).join("\n") + "\n" + compile_statements(node.block.body) + "\n}"
              else
                compile_statement(node.block)
              end
@@ -267,9 +267,9 @@ module RBS
       end
 
       if id === :identifier
-        "var #{name} = {}; #{body.join(" ")}"
+        "var #{name} = {};\n#{body.join("\n")}"
       else
-        "#{name} = {}; #{body.join(" ")}"
+        "#{name} = {};\n#{body.join("\n")}"
       end
     end
 
