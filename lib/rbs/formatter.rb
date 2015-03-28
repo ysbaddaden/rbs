@@ -248,28 +248,35 @@ module RBS
       [splats, args, defaults]
     end
 
+    # TODO: reopening object statements (ie. verify the object doesn't exist, yet)
+    # TODO: assign self = this in object methods (when needed)
     def compile_object_statement(node, parent: nil)
       id = if parent
              Node.new(:member_expression, object: parent, property: node.id, computed: false)
            else
              node.id
            end
+
       name = compile_expression(id)
+      parent = node.parent ? compile_expression(node.parent) : "Object"
 
       body = node.body.map do |stmt|
         case stmt.type
-        when :object_statement   then compile_object_statement(stmt, parent: id)
-        when :function_statement then compile_function_statement(stmt, parent: id)
-        when :property           then "#{name}.#{compile_expression(stmt.key)} = #{compile_expression(stmt.value)};"
+        when :object_statement
+          compile_object_statement(stmt, parent: id)
+        when :function_statement
+          compile_function_statement(stmt, parent: id)
+        when :property
+          "#{name}.#{compile_expression(stmt.key)} = #{compile_expression(stmt.value)};"
         else
           raise "unsupported object body statement"
         end
       end
 
       if id === :identifier
-        "var #{name} = {};\n#{body.join("\n")}"
+        "var #{name} = Object.create(#{parent});\n#{body.join("\n")}"
       else
-        "#{name} = {};\n#{body.join("\n")}"
+        "#{name} = Object.create(#{parent});\n#{body.join("\n")}"
       end
     end
 

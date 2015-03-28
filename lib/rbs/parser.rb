@@ -124,6 +124,12 @@ module RBS
     def parse_object_statement
       expect(:object)
       id = parse_member_expression(allow_calls: false)
+
+      if match('<')
+        expect('<')
+        parent = parse_member_expression(allow_calls: false)
+      end
+
       expect(:LF)
 
       body = []
@@ -149,7 +155,7 @@ module RBS
       expect(:end)
       expect(:LF) unless match(:EOF)
 
-      node(:object_statement, id: id, body: body)
+      node(:object_statement, id: id, parent: parent, body: body)
     end
 
     # TODO: begin/end without rescue/ensure should be a block_statement (ie. isolated scope)

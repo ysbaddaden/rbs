@@ -270,13 +270,25 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_object_statement
-    assert_format "var A = {};", "object A; end"
-    assert_format "var A = {}; A.B = {};", "object A; object B; end; end"
+    assert_format "var A = Object.create(Object);", "object A; end"
+    assert_format "var A = Object.create(B);", "object A < B; end"
+    assert_format "var Post = Object.create(Some.Extern.Model);", "object Post < Some.Extern.Model; end"
 
-    assert_format "var A = {}; A.foo = 'bar'; A.baz = function () { return this.foo; };",
+    assert_format "var A = Object.create(Object); A.name = 'object A'; A.prop = 123;",
+      "object A; name = 'object A'; prop = 123; end"
+
+    assert_format "var A = Object.create(Object); A.add = function (a, b) { return a + b; };",
+      "object A; def add(a, b); return a + b; end; end"
+  end
+
+  def test_nested_object_statements
+    assert_format "var A = Object.create(Object); A.B = Object.create(Object);",
+      "object A; object B; end; end"
+
+    assert_format "var A = Object.create(Object); A.foo = 'bar'; A.baz = function () { return this.foo; };",
       "object A; foo = 'bar'; def baz; return this.foo; end; end;"
 
-    assert_format "var A = {}; A.B = {}; A.B.foo = 'bar'; A.B.baz = function () { return this.foo; };",
+    assert_format "var A = Object.create(Object); A.B = Object.create(Object); A.B.foo = 'bar'; A.B.baz = function () { return this.foo; };",
       "object A; object B; foo = 'bar'; def baz; return this.foo; end; end; end"
   end
 end
