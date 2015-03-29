@@ -6,8 +6,8 @@ module RBS
       @formatter = formatter
     end
 
-    def compile(raw: false, spaces: 2)
-      output = @formatter.compile(raw: raw)
+    def compile(type: "iife", spaces: 2)
+      output = @formatter.compile(type: type)
       deep = 0
       indent = " " * spaces
 

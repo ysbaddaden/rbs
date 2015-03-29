@@ -11,8 +11,8 @@ class Minitest::Test
     RBS::Parser.new(lex(code)).parse
   end
 
-  def format(code, raw: true)
-    RBS::Formatter.new(RBS::Parser.new(lex(code))).compile(raw: raw)
+  def format(code, type: "raw")
+    RBS::Formatter.new(RBS::Parser.new(lex(code))).compile(type: "raw")
   end
 
 

@@ -7,15 +7,19 @@ module RBS
       @scopes = [[]]
     end
 
-    def compile(raw: false)
-      "".tap do |code|
-        code << "(function () {\n'use strict';\n\n" unless raw
+    def compile(type: "iife")
+      program, vars = with_scope { compile_statements(@parser.parse.body) }
+      code = compile_vars(vars) + program
 
-        program, vars = with_scope { compile_statements(@parser.parse.body) }
-        code << vars = "var " + vars.sort.join(", ") + ";\n" if vars.any?
-        code << program
-
-        code << "\n}());" unless raw
+      case type
+      when "amd"
+        "define(function (require, exports, module) {\n'use strict';\n\n#{code}\n});"
+      when "iife"
+        "(function () {\n'use strict';\n\n#{code}\n}());"
+      when "raw"
+        code
+      else
+        raise ArgumentError, "unknown module type: '#{type}'"
       end
     end
 
@@ -210,15 +214,22 @@ module RBS
       splats, args, defaults = compile_function_arguments(node)
       body, vars = with_scope { compile_statements(node.block.body) }
       vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
-      vars = "var " + vars.sort.join(", ") + ";" if vars.any?
 
-      body = [splats, defaults, vars, body].reject(&:empty?).join("\n")
+      body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
       body = body.empty? ? "{}" : "{\n#{body}\n}"
 
       if id === :identifier
         "function #{name}(#{args.join(', ')}) #{body}"
       else
         "#{name} = function (#{args.join(', ')}) #{body};"
+      end
+    end
+
+    def compile_vars(vars)
+      if vars.any?
+        "var " + vars.sort.join(", ") + ";\n"
+      else
+        ""
       end
     end
 
