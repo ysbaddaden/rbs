@@ -1,5 +1,4 @@
 require 'test_helper'
-require 'rbs/lexer'
 
 class RBS::LexerTest < Minitest::Test
   def test_initialize

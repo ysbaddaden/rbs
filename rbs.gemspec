@@ -1,4 +1,4 @@
-require File.expand_path('../lib/rbs/version', __FILE__)
+require File.expand_path("../lib/rbs/version", __FILE__)
 
 Gem::Specification.new do |gem|
   gem.authors       = ["Julien Portalier"]
@@ -14,8 +14,12 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = RBS::VERSION::STRING
 
-  gem.cert_chain    = ['certs/ysbaddaden.pem']
-  gem.signing_key   = File.expand_path('~/.ssh/gem-private_key.pem') if $0 =~ /gem\z/
+  gem.bindir        = "bin"
+  gem.executables   = ["rbs"]
 
-  gem.add_development_dependency 'minitest'
+  gem.cert_chain    = ["certs/ysbaddaden.pem"]
+  gem.signing_key   = File.expand_path("~/.ssh/gem-private_key.pem") if $0 =~ /gem\z/
+
+  gem.add_runtime_dependency     "thor"
+  gem.add_development_dependency "minitest"
 end

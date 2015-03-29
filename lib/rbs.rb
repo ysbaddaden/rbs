@@ -1,0 +1,6 @@
+require "rbs/version"
+require "rbs/lexer"
+require "rbs/lexer/rewriter"
+require "rbs/parser"
+require "rbs/formatter"
+require "rbs/indenter"

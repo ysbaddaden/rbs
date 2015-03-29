@@ -30,20 +30,24 @@ module RBS
     end
 
     def inspect
-      { type: type }.merge(params).to_s
+      to_h.to_s
+    end
+
+    def to_h
+      { type: type }.merge(Hash[params_as(:to_h)])
     end
 
     def as_json
-      { type: camelize(type) }.merge(Hash[params_as_json])
+      { type: camelize(type) }.merge(Hash[params_as(:as_json)])
     end
 
     private
 
-    def params_as_json
+    def params_as(method)
       params.map do |key, value|
         value = case value
-                when Array     then value.map(&:as_json)
-                when RBS::Node then value.as_json
+                when Array     then value.map(&method)
+                when RBS::Node then value.__send__(method)
                 else                value
                 end
         [key, value]

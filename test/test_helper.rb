@@ -1,6 +1,8 @@
 require 'pp'
 require 'bundler'
 Bundler.require(:default, :test)
+require "minitest/autorun"
+require "rbs"
 
 class Minitest::Test
   def lex(code)

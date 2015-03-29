@@ -1,5 +1,4 @@
 require 'test_helper'
-require 'rbs/state'
 
 class RBS::StateTest < Minitest::Test
   def test_is

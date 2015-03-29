@@ -1,6 +1,10 @@
 module RBS
   def self.version
-    Gem::Version.new File.read(File.expand_path('../../../VERSION', __FILE__))
+    Gem::Version.new(File.read(File.expand_path('../../../VERSION', __FILE__)))
+  end
+
+  def self.version_string
+    "rbs v#{version}"
   end
 
   module VERSION

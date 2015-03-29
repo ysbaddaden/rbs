@@ -1,14 +1,6 @@
 #! /usr/bin/env ruby
-$:.unshift File.expand_path('../../lib', File.realpath(__FILE__))
+$:.unshift File.expand_path("../../lib", File.realpath(__FILE__))
 
-require 'rbs/lexer'
-require 'rbs/lexer/rewriter'
-require 'rbs/parser'
-require 'rbs/formatter'
-require 'rbs/indenter'
+require "rbs/cli"
 
-lexer = RBS::Rewriter.new(RBS::Lexer.new(ARGF.read))
-parser = RBS::Parser.new(lexer)
-formatter = RBS::Formatter.new(parser)
-indenter = RBS::Indenter.new(formatter)
-puts indenter.compile(raw: false, spaces: 2)
+RBS::CLI.start(ARGV)

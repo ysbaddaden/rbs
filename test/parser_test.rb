@@ -1,7 +1,4 @@
 require 'test_helper'
-require 'rbs/lexer'
-require 'rbs/lexer/rewriter'
-require 'rbs/parser'
 
 class RBS::ParserTest < Minitest::Test
   def test_parse
