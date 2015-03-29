@@ -4,12 +4,17 @@ module RBS
 
     def initialize(parser)
       @parser = parser
+      @scopes = [[]]
     end
 
     def compile(raw: false)
       "".tap do |code|
         code << "(function () {\n'use strict';\n\n" unless raw
-        code << compile_statements(@parser.parse.body)
+
+        program, vars = with_scope { compile_statements(@parser.parse.body) }
+        code << vars = "var " + vars.sort.join(", ") + ";\n" if vars.any?
+        code << program
+
         code << "\n}());" unless raw
       end
     end
@@ -203,12 +208,12 @@ module RBS
       name = compile_expression(id)
 
       splats, args, defaults = compile_function_arguments(node)
+      body, vars = with_scope { compile_statements(node.block.body) }
+      vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
+      vars = "var " + vars.sort.join(", ") + ";" if vars.any?
 
-      body = if splats.any? || defaults.any?
-               "{\n" + (splats + defaults).join("\n") + "\n" + compile_statements(node.block.body) + "\n}"
-             else
-               compile_statement(node.block)
-             end
+      body = [splats, defaults, vars, body].reject(&:empty?).join("\n")
+      body = body.empty? ? "{}" : "{\n#{body}\n}"
 
       if id === :identifier
         "function #{name}(#{args.join(', ')}) #{body}"
@@ -389,6 +394,7 @@ module RBS
     end
 
     def compile_assignment_expression(node)
+      declare_scope_variable(node.left.name) if node.left === :identifier
       [compile_expression(node.left), node.operator, compile_expression(node.right)].join(" ")
     end
 
@@ -456,5 +462,15 @@ module RBS
     #             end
     #  Node.new(:binary_expression, operator: operator, left: node.left, right: right)
     #end
+
+    def with_scope
+      @scopes << []
+      [yield, @scopes.pop]
+    end
+
+    # TODO: verify that the variable doesn't already exit in an accessible parent scope
+    def declare_scope_variable(name)
+      @scopes.last << name
+    end
   end
 end

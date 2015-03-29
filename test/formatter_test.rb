@@ -82,7 +82,7 @@ class RBS::FormatterTest < Minitest::Test
 
   def test_assignment_expression
     RBS::ASSIGNMENT_OPERATOR.each do |op|
-      assert_format "a #{op} b;", "a #{op} b"
+      assert_format "var a; a #{op} b;", "a #{op} b"
     end
   end
 
@@ -267,6 +267,25 @@ class RBS::FormatterTest < Minitest::Test
 
     assert_format "function x(a, b, c, d) { if (c === undefined) c = 2; if (d === undefined) d = 3; }",
       "def x(a, b, c = 2, d = 3) end"
+  end
+
+  def test_variable_scoping_in_function_statements
+    assert_format "function x() { var a, b; b = 1; a = 2; }",
+      "def x() b = 1; a = 2; end"
+
+    assert_format "function x(a, b) { var c; a += 1; b = 2; c = 3; }",
+      "def x(a, b) a += 1; b = 2; c = 3; end"
+
+    assert_format "function x(a) { var c; a = {}; a.b = 2; c = 3; }",
+      "def x(a) a = {}; a.b = 2; c = 3; end"
+
+    assert_format "function x(b) { var a = Array.prototype.slice.call(arguments, 1); var c; c = b; b = a; a = {}; }",
+      "def x(b, *a) c = b; b = a; a = {}; end"
+  end
+
+  def test_variable_scoping_in_program
+    assert_format "var a, b, c; a = b = c = 1;", "a = b = c = 1"
+    assert_format "var a; a = {}; a.b = 1;", "a = {}; a.b = 1"
   end
 
   def test_object_statement
