@@ -3,8 +3,17 @@ require File.expand_path("../lib/rbs/version", __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Julien Portalier"]
   gem.email         = ["julien@portalier.com"]
-  gem.description   = ""
-  gem.summary       = ""
+  gem.summary       = "Ruby inspired language that transcompiles to simple JavaScript"
+  gem.description   = <<-EOF
+    A Ruby inspired language that transcompiles to simple JavaScript. The main
+    goal is to bring some sanity to Browser programming with a simple,
+    beautiful and zen language.
+
+    While Opal aims to implement Ruby over the JavaScript language, RBS aims to
+    bring only a subset of the Ruby language so it's possible to develop for
+    any existing framework (eg: backbone, angular, ember), or even drop RBS in
+    favor to the compiled JavaScript (why not?)
+  EOF
   gem.homepage      = "http://github.com/ysbaddaden/rbs"
   gem.license       = "MIT"
 
