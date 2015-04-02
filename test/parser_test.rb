@@ -182,6 +182,16 @@ class RBS::ParserTest < Minitest::Test
     assert_expression :literal, '/\w+/'
   end
 
+  def test_lambda_expression
+    assert_expression :lambda_expression, "->(a) { a += 1; }"
+    assert_expression :lambda_expression, "->(a) { a += 1 }"
+    assert_expression :lambda_expression, "-> { a = 1; a += 1; }"
+    assert_expression :lambda_expression, "->(*args) { args.map(->(x) { x * 2 }) }"
+    assert_expression({ arguments: [:identifier, :identifier, :identifier] }, "->(a, b, c) { a + b + c }")
+    assert_expression({ arguments: [:splat_expression, :identifier] }, "->(*a, b) {}")
+    assert_expression({ block: { body: [:expression_statement] } }, "->(*args) { args.map(->(x) { x * 2 }) }")
+  end
+
   def test_group_expression
     assert_expression :group_expression, "(1)"
     assert_expression :group_expression, "(1 + a)"

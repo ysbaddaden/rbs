@@ -3,7 +3,7 @@ require 'rbs/parser/node'
 
 module RBS
   LHS = %i(identifier member_expression)
-  INLINE_TERM = %i(EOF else elsif end when)
+  INLINE_TERM = %i(EOF else elsif end when })
 
   # The parser is heavily influenced by Esprima's parser:
   # http://esprima.org/
@@ -29,7 +29,7 @@ module RBS
       statements = []
 
       loop do
-        break if match %i(end else elsif when rescue ensure)
+        break if match %i(end else elsif when rescue ensure })
         break unless statement = parse_statement
         statements << statement
       end
@@ -426,9 +426,39 @@ module RBS
       when :'('        then parse_group_expression
       when :'['        then parse_array
       when :'{'        then parse_object
-      when :'->'
+      when :'->'       then parse_lambda_expression
       else             unexpected_error(lex)
       end
+    end
+
+    def parse_lambda_expression
+      expect('->')
+
+      arguments = parse_lambda_arguments
+
+      expect('{')
+      block = node(:block_statement, body: parse_statements)
+      expect('}')
+
+      node(:lambda_expression, arguments: arguments, block: block)
+    end
+
+    # TODO: allow paren-less lambda arguments
+    def parse_lambda_arguments
+      position_token = lookahead
+
+      if match '('
+        arguments = parse_list '(', ')', &method(:parse_def_argument)
+        expect(:LF) if match(:LF)
+      else
+        arguments = []
+      end
+
+      if duplicated_argument?(arguments)
+        syntax_error("duplicated argument name", position_token)
+      end
+
+      arguments
     end
 
     def parse_group_expression

@@ -32,6 +32,21 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "{ a: 1, b: c };", "{ a: 1, b: c }"
   end
 
+  def test_lambda_expression
+    assert_format "function () {};", "-> {}"
+    assert_format "function (a, b) {};", "->(a, b) {}"
+    assert_format "function () { var a = Array.prototype.slice.call(arguments); };", "->(*a) {}"
+    assert_format "list.map(function (x) { return x * 2; });", "list.map ->(x) { return x * 2 }"
+  end
+
+  def test_variable_scope_in_lambda_expression
+    assert_format "function (x) { var y; y = x * 2; return y; };",
+      "->(x) { y = x * 2; return y; }"
+
+    assert_format "var y; y = null; a.map(function (x) { y = x * 2; return y; });",
+      "y = null; a.map ->(x) { y = x * 2; return y; }"
+  end
+
   def test_group_expression
     assert_format "(a);", "(a)"
     assert_format "(a + b) * 2;", "(a + b) * 2"

@@ -308,6 +308,7 @@ module RBS
       case expr.type
       when :identifier            then expr.name
       when :literal               then expr.value
+      when :lambda_expression     then compile_lambda_expression(expr)
       when :group_expression      then compile_group_expression(expr)
       when :array_expression      then compile_array_expression(expr)
       when :object_expression     then compile_object_expression(expr)
@@ -321,6 +322,26 @@ module RBS
         raise "unsupported expression: #{expr.type}"
       end
     end
+
+    def compile_lambda_expression(node, parent: nil)
+      splats, args, defaults = compile_function_arguments(node)
+      body, vars = with_scope { compile_statements(node.block.body) }
+      vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
+
+      body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
+      body = body.empty? ? "{}" : "{\n#{body}\n}"
+
+      "function (#{args.join(', ')}) #{body}"
+    end
+
+    def compile_vars(vars)
+      if vars.any?
+        "var " + vars.sort.join(", ") + ";\n"
+      else
+        ""
+      end
+    end
+
 
     def compile_group_expression(node)
       "(" + compile_expression(node.expression) + ")"
@@ -479,9 +500,9 @@ module RBS
       [yield, @scopes.pop]
     end
 
-    # TODO: verify that the variable doesn't already exit in an accessible parent scope
+    # TODO: stop checking variable existence at some scope level (eg: def)
     def declare_scope_variable(name)
-      @scopes.last << name
+      @scopes.last << name unless @scopes.flatten.include?(name)
     end
   end
 end
