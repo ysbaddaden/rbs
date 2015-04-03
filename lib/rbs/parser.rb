@@ -559,12 +559,19 @@ module RBS
       lookahead === type
     end
 
+    # TODO: push COMMENT tokens as nodes to the AST (?)
     def lex
       @index += 1
+      while lexer.tokens[@index] === :COMMENT
+        @index += 1
+      end
       lexer.tokens[@index] or unexpected_error(:EOF)
     end
 
     def lookahead(peek = 1)
+      while lexer.tokens[@index + peek] === :COMMENT
+        peek += 1
+      end
       lexer.tokens[@index + peek]
     end
 
