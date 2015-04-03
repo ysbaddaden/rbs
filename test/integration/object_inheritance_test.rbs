@@ -1,0 +1,39 @@
+assert = require("minitest").assert
+
+object A
+  foo = "foo"
+
+  def baz
+    return "baz"
+  end
+end
+
+object B < A
+  bar = "bar"
+
+  def foobar
+    return this.foo + this.bar
+  end
+end
+
+suite "object inheritance", -> {
+  b = Object.create(B);
+
+  test "accesses properties and methods of parent object", -> {
+    assert.equal "baz", b.baz()
+    assert.equal "foobar", b.foobar()
+  }
+
+  test "defaut prototype is Object", -> {
+    assert Object.isPrototypeOf(A)
+    assert.same Object, Object.getPrototypeOf(A)
+  }
+
+  test "prototype chain", -> {
+    assert A.isPrototypeOf(B)
+    assert.same A, Object.getPrototypeOf(B)
+
+    assert B.isPrototypeOf(b)
+    assert.same B, Object.getPrototypeOf(b)
+  }
+}
