@@ -4,11 +4,13 @@ module RBS
 
     def initialize(parser)
       @parser = parser
-      @scopes = [[]]
+      @scopes = []
     end
 
     def compile(type: "iife")
-      program, vars = with_scope { compile_statements(@parser.parse.body) }
+      program, vars = with_scope(traversable: false) do
+        compile_statements(@parser.parse.body)
+      end
       code = compile_vars(vars) + program
 
       case type
@@ -212,7 +214,9 @@ module RBS
       name = compile_expression(id)
 
       splats, args, defaults = compile_function_arguments(node)
-      body, vars = with_scope { compile_statements(node.block.body) }
+      body, vars = with_scope(traversable: false) do
+        compile_statements(node.block.body)
+      end
       vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
 
       body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
@@ -325,7 +329,9 @@ module RBS
 
     def compile_lambda_expression(node, parent: nil)
       splats, args, defaults = compile_function_arguments(node)
-      body, vars = with_scope { compile_statements(node.block.body) }
+      body, vars = with_scope(traversable: true) do
+        compile_statements(node.block.body)
+      end
       vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
 
       body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
@@ -495,14 +501,17 @@ module RBS
     #  Node.new(:binary_expression, operator: operator, left: node.left, right: right)
     #end
 
-    def with_scope
-      @scopes << []
-      [yield, @scopes.pop]
+    def with_scope(traversable:)
+      @scopes << { vars: [], traversable: traversable }
+      [yield, @scopes.pop[:vars]]
     end
 
-    # TODO: stop checking variable existence at some scope level (eg: def)
     def declare_scope_variable(name)
-      @scopes.last << name unless @scopes.flatten.include?(name)
+      @scopes.reverse_each do |scope|
+        return if scope[:vars].include?(name)
+        break unless scope[:traversable]
+      end
+      @scopes.last[:vars] << name
     end
   end
 end

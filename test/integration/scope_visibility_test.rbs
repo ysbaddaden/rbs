@@ -3,7 +3,7 @@ assert = require("minitest").assert
 bar = "bar"
 
 def set_baz
-  bar = "baz"
+  return bar = "baz"
 end
 
 object Foo
