@@ -1,0 +1,15 @@
+{
+    "name": "rbs",
+    "version": "0.0.1",
+    "description": "",
+    "keywords": [],
+    "author": "Julien Portalier <julien@portalier.com>",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/ysbaddaden/rbs.git"
+    },
+    "devDependencies": {
+        "mocha": "*",
+        "minitest": "git://github.com/ysbaddaden/minitest-js.git"
+    }
+}

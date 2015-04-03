@@ -1,0 +1,47 @@
+assert = require("minitest").assert
+
+bar = "bar"
+
+def set_baz
+  bar = "baz"
+end
+
+object Foo
+  def get_bar
+    return bar
+  end
+
+  def set_baz
+    return bar = "baz"
+  end
+
+  def setget_baz
+    bar = "baz"
+    return bar
+  end
+end
+
+suite "scope visibility", -> {
+  foo = Object.create(Foo)
+
+  test "var is found in main scope from lambda", -> {
+    assert.equal "bar", foo.get_bar()
+  }
+
+  test "var is found in main scope from (object) def", -> {
+    assert.equal "bar", foo.get_bar()
+  }
+
+  test "var is local to def", -> {
+    assert.equal "baz", set_baz()
+    assert.equal "bar", bar
+  }
+
+  test "var is local to object def", -> {
+    assert.equal "baz", foo.set_baz()
+    assert.equal "bar", bar
+
+    assert.equal "baz", foo.setget_baz()
+    assert.equal "bar", bar
+  }
+}
