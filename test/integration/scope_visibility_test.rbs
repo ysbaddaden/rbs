@@ -1,5 +1,3 @@
-assert = require("minitest").assert
-
 bar = "bar"
 
 def set_baz
