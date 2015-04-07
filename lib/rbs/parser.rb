@@ -423,11 +423,27 @@ module RBS
                        then node(:literal, value: lex.value)
       when :STRING     then node(:literal, value: "'%s'" % lex.value)
       when :identifier then node(:identifier, name: lex.value)
+      when :new        then parse_new_expression
       when :'('        then parse_group_expression
       when :'['        then parse_array
       when :'{'        then parse_object
       when :'->'       then parse_lambda_expression
       else             unexpected_error(lex)
+      end
+    end
+
+    def parse_new_expression
+      expect(:new)
+      position_token = lookahead
+      expr = parse_member_expression
+
+      case expr.type
+      when :identifier, :member_expression
+        node(:new_expression, callee: expr, arguments: [])
+      when :call_expression
+        node(:new_expression, callee: expr.callee, arguments: expr.arguments)
+      else
+        unexpected_error(position_token)
       end
     end
 

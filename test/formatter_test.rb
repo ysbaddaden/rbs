@@ -63,15 +63,16 @@ class RBS::FormatterTest < Minitest::Test
   def test_call_expression
     assert_format "t();", "t()"
     assert_format "some(thing, more);", "some(thing, more)"
+    assert_format "some({ a: b, c: 1 * 2 });", "some(a: b, c: 1 * 2)"
 
     assert_format "some.apply(null, things);", "some(*things)"
-    assert_format "some.apply(null, more.concat(splatted, things));", "some(*more, *splatted, *things)"
+    assert_format "some.apply(null, [].concat(more, splatted, things));", "some(*more, *splatted, *things)"
 
     assert_format "some.apply(null, [a, b].concat(c));", "some(a, b, *c)"
     assert_format "some.apply(null, [a].concat(b, [c]));", "some(a, *b, c)"
-    assert_format "some.apply(null, a.concat([b, c]));", "some(*a, b, c)"
-    assert_format "some.apply(null, a.concat([b, c], d));", "some(*a, b, c, *d)"
-    assert_format "some.apply(null, a.concat([b, c], d, [e]));", "some(*a, b, c, *d, e)"
+    assert_format "some.apply(null, [].concat(a, [b, c]));", "some(*a, b, c)"
+    assert_format "some.apply(null, [].concat(a, [b, c], d));", "some(*a, b, c, *d)"
+    assert_format "some.apply(null, [].concat(a, [b, c], d, [e]));", "some(*a, b, c, *d, e)"
     assert_format "some.apply(null, [a].concat(b, [c], d, [e]));", "some(a, *b, c, *d, e)"
   end
 
@@ -320,5 +321,13 @@ class RBS::FormatterTest < Minitest::Test
 
     assert_format "var A = Object.create(Object); A.B = Object.create(Object); A.B.foo = 'bar'; A.B.baz = function () { return this.foo; };",
       "object A; object B; foo = 'bar'; def baz; return this.foo; end; end; end"
+  end
+
+  def test_parse_new_expression
+    assert_format "new Foo();", "new Foo()"
+    assert_format "new Foo.Bar(a, b);", "new Foo.Bar(a, b)"
+    assert_format "new Foo[bar]({ a: 1, b: 2 });", "new Foo[bar](a: 1, b: 2)"
+    assert_match "(Foo, args, function () {})", format("new Foo(*args)")
+    assert_match "(Foo.Bar, [].concat(a, [b, c], d), function () {})", format("new Foo.Bar(*a, b, c, *d)")
   end
 end

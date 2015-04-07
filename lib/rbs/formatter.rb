@@ -318,10 +318,10 @@ module RBS
       when :object_expression     then compile_object_expression(expr)
       when :member_expression     then compile_member_expression(expr)
       when :call_expression       then compile_call_expression(expr)
-      when :splat_expression      then compile_splat_expression(expr)
       when :unary_expression      then compile_unary_expression(expr)
       when :binary_expression     then compile_binary_expression(expr)
       when :assignment_expression then compile_assignment_expression(expr)
+      when :new_expression        then compile_new_expression(expr)
       else
         raise "unsupported expression: #{expr.type}"
       end
@@ -378,23 +378,45 @@ module RBS
       end
     end
 
-    # TODO: object argument
     def compile_call_expression(node)
       callee = compile_expression(node.callee)
 
+      case args = compile_call_arguments(node)
+      when String
+        "#{callee}.apply(null, #{args})"
+      when Array
+        "#{callee}(#{args.join(', ')})"
+      end
+    end
+
+    def compile_new_expression(node)
+      callee = compile_expression(node.callee)
+
+      case args = compile_call_arguments(node)
+      when String
+        "(function (fn, args, ctor) {" <<
+        "  ctor.constructor = fn.constructor;" <<
+        "  var child = new ctor(), result = fn.apply(child, args), t = typeof result;" <<
+        "  return (t == 'object' || t == 'function') result || child : child;" <<
+        "}(#{callee}, #{args}, function () {}))"
+      when Array
+        "new #{callee}(#{args.join(', ')})"
+      end
+    end
+
+    def compile_call_arguments(node)
       if node.arguments.size == 0
-        return "#{callee}()"
+        return []
       end
 
       if node.arguments.all? { |a| a === :splat_expression }
         arg = if node.arguments.size == 1
                 compile_expression(node.arguments[0].expression)
               else
-                one = compile_expression(node.arguments[0].expression)
-                more = node.arguments.slice(1 .. -1).map { |a| compile_expression(a.expression) }
-                "#{one}.concat(#{more.join(', ')})"
+                splats = node.arguments.map { |a| compile_expression(a.expression) }
+                "[].concat(#{splats.join(', ')})"
               end
-        return "#{callee}.apply(null, #{arg})"
+        return arg
       end
 
       if node.arguments.any? { |a| a === :splat_expression }
@@ -415,11 +437,11 @@ module RBS
           end
         end
 
-        return "#{callee}.apply(null, #{args.shift}.concat(#{args.join(', ')}))"
+        first = args.first.start_with?("[") ? args.shift : "[]"
+        return "#{first}.concat(#{args.join(', ')})"
       end
 
-      args = node.arguments.map(&method(:compile_expression))
-      "#{callee}(#{args.join(', ')})"
+      node.arguments.map(&method(:compile_expression))
     end
 
     def compile_unary_expression(node)

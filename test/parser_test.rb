@@ -271,4 +271,14 @@ class RBS::ParserTest < Minitest::Test
     assert_expression :binary_expression, "a == !b"
     assert_expression :binary_expression, "!a == b"
   end
+
+  def test_parse_new_expression
+    assert_expression :new_expression, "new Foo"
+    assert_expression :new_expression, "new Error()"
+    assert_expression :new_expression, "new Foo[bar]()"
+    assert_expression :new_expression, "new Foo(*args)"
+    assert_expression({ callee: :identifier, arguments: [] }, "new Foo()")
+    assert_expression({ callee: :member_expression, arguments: [:identifier, :identifier] }, "new Foo.Bar(a, b)")
+    assert_expression({ callee: :identifier, arguments: [:splat_expression, :object_expression] }, "new Foo(*args, a: 1, b: 2)")
+  end
 end
