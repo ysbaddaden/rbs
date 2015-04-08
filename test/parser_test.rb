@@ -120,6 +120,20 @@ class RBS::ParserTest < Minitest::Test
     assert_statement({ alternate: :block_statement }, "case x; when 1; else; y; end")
   end
 
+  def test_for_in_statement
+    assert_statement :for_in_statement, "for key in obj; end"
+    assert_statement :for_in_statement, "for key, value in obj; end"
+    assert_statement({ object: :identifier, key: :identifier }, "for key in obj; end")
+    assert_statement({ object: :member_expression, key: :identifier, value: :identifier }, "for key, value in some.obj; end")
+  end
+
+  def test_for_of_statement
+    assert_statement :for_of_statement, "for value of ary; end"
+    assert_statement :for_of_statement, "for value, i of collection; end"
+    assert_statement({ collection: :identifier, value: :identifier }, "for value of ary; end")
+    assert_statement({ collection: :member_expression, value: :identifier, index: :identifier }, "for key, value of some.collection; end")
+  end
+
   def test_control_statement
     assert_statement :break_statement, "break"
     assert_statement :next_statement, "next"

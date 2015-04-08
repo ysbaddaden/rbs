@@ -192,6 +192,25 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "while (1) { if (t()) { break; } }", "loop; break if t(); end"
   end
 
+  def test_for_in_statement
+    assert_format "var key; for (key in obj) {}",
+      "for key in obj; end"
+
+    assert_format "var key, value; for (key in obj) { value = obj[key]; }",
+      "for key, value in obj; end"
+
+    assert_format "var key, value; for (key in some.deep[obj]) { value = some.deep[obj][key]; }",
+      "for key, value in some.deep[obj]; end"
+  end
+
+  def test_for_of_statement
+    assert_format "var __r1, __r2, value; for (__r1 = 0, __r2 = obj.length; __r1 < __r2; __r1++) { value = obj[__r1]; }",
+      "for value of obj; end"
+
+    assert_format "var __r1, i, value; for (i = 0, __r1 = obj.length; i < __r1; i++) { value = obj[i]; }",
+      "for value, i of obj; end"
+  end
+
   def test_rescue_statement
     ex = "__rbs_exception"
 

@@ -5,6 +5,7 @@ module RBS
     def initialize(parser)
       @parser = parser
       @scopes = []
+      @reference = 0
     end
 
     def compile(type: "iife")
@@ -38,6 +39,8 @@ module RBS
       when :case_statement       then compile_case_statement(stmt)
       when :while_statement      then compile_while_statement(stmt)
       when :until_statement      then compile_until_statement(stmt)
+      when :for_in_statement     then compile_for_in_statement(stmt)
+      when :for_of_statement     then compile_for_of_statement(stmt)
       when :loop_statement       then compile_loop_statement(stmt)
       when :try_statement        then compile_try_statement(stmt)
       when :function_statement   then compile_function_statement(stmt)
@@ -118,6 +121,38 @@ module RBS
     def compile_loop_statement(node)
       body = compile_statement(node.consequent)
       "while (1) #{body}"
+    end
+
+    # TODO: temporary reference for object (when looping with value for quicker access)
+    def compile_for_in_statement(node)
+      declare_scope_variable key = compile_expression(node.key)
+      object = compile_expression(node.object)
+      body = compile_statement(node.block)
+
+      if node.value
+        declare_scope_variable value = compile_expression(node.value)
+        body = "{\n" + value + " = #{object}[#{key}];\n" + body.slice(1 .. -1)
+      end
+
+      "for (#{key} in #{object}) #{body}"
+    end
+
+    # TODO: temporary reference for collection (unless it's simple enough)
+    def compile_for_of_statement(node)
+      declare_scope_variable value = compile_expression(node.value)
+      collection = compile_expression(node.collection)
+      body = compile_statement(node.block)
+
+      if node.index
+        declare_scope_variable index = compile_expression(node.index)
+      else
+        index = generate_reference
+      end
+
+      len = generate_reference
+
+      body = "{\n" + value + " = #{collection}[#{index}];\n" + body.slice(1 .. -1)
+      "for (#{index} = 0, #{len} = #{collection}.length; #{index} < #{len}; #{index}++) #{body}"
     end
 
     def compile_try_statement(node)
@@ -534,6 +569,13 @@ module RBS
         break unless scope[:traversable]
       end
       @scopes.last[:vars] << name
+    end
+
+    # TODO: generate nicer variables like a, b or c (depending on the availablity in the scope)
+    def generate_reference
+      ("__r" + (@reference += 1).to_s).tap do |ref|
+        declare_scope_variable(ref)
+      end
     end
   end
 end

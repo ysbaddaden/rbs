@@ -37,7 +37,6 @@ module RBS
       statements
     end
 
-    # TODO: for loops
     # TODO: prototype definitions
     # TODO: parse for statement modifier
     def parse_statement
@@ -62,6 +61,27 @@ module RBS
       end
 
       stmt
+    end
+
+    def parse_for_statement
+      expect(:for)
+      left = node(expect(:identifier))
+
+      if match(',')
+        expect(',')
+        b = node(expect(:identifier))
+      end
+
+      token = expect(:in, :of)
+      right = parse_expression
+      block = node(:block_statement, body: parse_statements)
+      expect(:end)
+
+      if token === :in
+        node(:for_in_statement, key: left, value: b, object: right, block: block)
+      else
+        node(:for_of_statement, value: left, index: b, collection: right, block: block)
+      end
     end
 
     def parse_def_statement(allow_member: true)
