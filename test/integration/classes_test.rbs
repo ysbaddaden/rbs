@@ -2,7 +2,7 @@ class A
   foo = "foo"
   bar = "bar"
 
-  def initialize(x = "A")
+  def constructor(x = "A")
     this.x = x
   end
 
@@ -15,7 +15,7 @@ class B < A
 end
 
 class C < B
-  def initialize
+  def constructor
     super "C"
   end
 end
@@ -28,7 +28,7 @@ object Foo
   end
 
   class E < A
-    def initialize
+    def constructor
       super "E"
     end
   end
@@ -55,7 +55,7 @@ suite "classes", -> {
     assert.equal "foo", c.get('foo')
   }
 
-  test "initialize + super", -> {
+  test "constructor + super", -> {
     assert.equal "A", a.x
     assert.equal "A", b.x
     assert.equal "Y", y.x

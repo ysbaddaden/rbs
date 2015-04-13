@@ -6,6 +6,7 @@ module RBS
       @parser = parser
       @scopes = []
       @functions = []
+      @objects = []
       @reference = 0
     end
 
@@ -27,8 +28,8 @@ module RBS
       end
     end
 
-    def compile_statements(block)
-      block.map(&method(:compile_statement)).join("\n")
+    def compile_statements(stmts)
+      stmts.map(&method(:compile_statement)).join("\n")
     end
 
     def compile_statement(stmt)
@@ -58,11 +59,8 @@ module RBS
     end
 
     def compile_block_statement(node)
-      if node.body.empty? || node.body.all? { |s| s === :empty_statement }
-        "{}"
-      else
-        "{\n#{compile_statements(node.body)}\n}"
-      end
+      stmts = node.body.reject { |s| s === :empty_statement }
+      block compile_statements(stmts)
     end
 
     def compile_if_statement(node)
@@ -206,8 +204,7 @@ module RBS
         test = handler.class_names
           .map { |id| "#{exception} instanceof #{id.name}" }
           .join(" || ")
-        body = body.empty? ? "{}" : "{\n#{body}\n}"
-        "if (#{test}) #{body} else {\nthrow #{exception};\n}"
+        "if (#{test}) #{block body} else {\nthrow #{exception};\n}"
       else
         body
       end
@@ -222,10 +219,10 @@ module RBS
              end
 
         body = if handler.body.any?
-                  "{\n" + ex + compile_statements(handler.body) + "\n}"
-                else
-                  "{}"
-                end
+                 "{\n" + ex + compile_statements(handler.body) + "\n}"
+               else
+                 "{}"
+               end
 
         if handler.class_names.any?
           test = handler.class_names.map { |id| "#{exception} instanceof #{id.name}" }.join(" || ")
@@ -249,22 +246,24 @@ module RBS
              node.id
            end
       name = compile_expression(id)
+      args, body = compile_function_body(node)
 
+      if id === :identifier
+        "function #{name}(#{args.join(', ')}) #{block body}"
+      else
+        "#{name} = function (#{args.join(', ')}) #{block body};"
+      end
+    end
+
+    def compile_function_body(node)
       with_function(node.id) do
         splats, args, defaults = compile_function_arguments(node)
         body, vars = with_scope(traversable: false) do
           compile_statements(node.block.body)
         end
         vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
-
         body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
-        body = body.empty? ? "{}" : "{\n#{body}\n}"
-
-        if id === :identifier
-          "function #{name}(#{args.join(', ')}) #{body}"
-        else
-          "#{name} = function (#{args.join(', ')}) #{body};"
-        end
+        [args, body]
       end
     end
 
@@ -349,9 +348,49 @@ module RBS
            else
              node.id
            end
-
       name = compile_expression(id)
+      parent = compile_expression(node.parent) if node.parent
 
+      with_object(name, parent) do
+        definition = compile_class_constructor(id, name, node)
+        definition += "\n#{name}.prototype = Object.create(#{parent}.prototype, {\n" <<
+                        "constructor: { value: #{name}, enumerable: false, writable: true, configurable: true }\n" <<
+                      "});" if node.parent
+        definition + "\n" + compile_class_body(id, name, node)
+      end
+    end
+
+    def compile_class_constructor(id, name, node)
+      # TODO: class constructor should be determined at the parser level
+      index = node.body.find_index do |stmt|
+        stmt === :function_statement && stmt.id === :identifier && stmt.id.name == "constructor"
+      end
+      stmt = node.body.delete_at(index) if index
+
+      args = []
+      body = if node.parent === :identifier && node.parent.name == "Error"
+               "var tmp = Error.apply(this, arguments);\n" <<
+               "Object.getOwnPropertyNames(tmp).forEach(function (propName) {\n" <<
+               "Object.defineProperty(this, propName, Object.getOwnPropertyDescriptor(tmp, propName));\n" <<
+               "}, this);\n" <<
+               "this.name = '#{name}';"
+             end
+
+      if stmt
+        args, tmp = compile_function_body(stmt)
+        body = body ? body + "\n" + tmp : tmp
+      elsif node.parent && body.nil?
+        body = "#{compile_expression(node.parent)}.apply(this, arguments);"
+      end
+
+      if id === :identifier
+        "function #{name}(#{args.join(', ')}) #{block body}"
+      else
+        "#{name} = function (#{args.join(', ')}) #{block body};"
+      end
+    end
+
+    def compile_class_body(id, name, node)
       body = node.body.map do |stmt|
         case stmt.type
         when :object_statement
@@ -359,8 +398,8 @@ module RBS
         when :class_statement
           compile_class_statement(stmt, parent: id)
         when :function_statement
-          compile_function_statement(stmt, parent:
-            Node.new(:member_expression, object: id, property: Node.new(:identifier, name: "prototype"), computed: false))
+          proto = Node.new(:member_expression, object: id, property: Node.new(:identifier, name: "prototype"), computed: false)
+          compile_function_statement(stmt, parent: proto)
         when :property
           "#{name}.prototype.#{compile_expression(stmt.key)} = #{compile_expression(stmt.value)};"
         else
@@ -368,35 +407,7 @@ module RBS
         end
       end
 
-      constructor = if node.parent === :identifier && node.parent.name == "Error"
-                      "var tmp = Error.apply(this, arguments);\n" <<
-                      "Object.getOwnPropertyNames(tmp).forEach(function (propName) {\n" <<
-                        "Object.defineProperty(this, propName, Object.getOwnPropertyDescriptor(tmp, propName));\n" <<
-                      "}, this);\n" <<
-                      "this.name = '#{name}';"
-                    else
-                      ""
-                    end
-
-      constructor += "if (typeof this.initialize === 'function') {\n" <<
-                       "this.initialize.apply(this, arguments);\n" <<
-                     "}"
-
-      definition = if id === :identifier
-                     "\nfunction #{name}() {\n#{constructor}\n}\n"
-                   else
-                     "\n#{name} = function () {\n#{constructor}\n};\n"
-                   end
-
-      if node.parent
-        parent = compile_expression(node.parent)
-        definition +=
-          "#{name}.prototype = Object.create(#{parent}.prototype, {\n" <<
-            "constructor: { value: #{name}, enumerable: false, writable: true, configurable: true }\n" <<
-          "});\n"
-      end
-
-      definition << "#{body.join("\n")}"
+      body.empty? ? "" : body.join("\n") + "\n"
     end
 
     def compile_return_statement(node)
@@ -409,7 +420,7 @@ module RBS
 
     def compile_expression(expr)
       case expr.type
-      when :identifier            then expr.name
+      when :identifier            then compile_identifier(expr)
       when :literal               then expr.value
       when :lambda_expression     then compile_lambda_expression(expr)
       when :group_expression      then compile_group_expression(expr)
@@ -426,6 +437,14 @@ module RBS
       end
     end
 
+    def compile_identifier(node)
+      if node.name == "super"
+        compile_super_expression(node)
+      else
+        node.name
+      end
+    end
+
     def compile_lambda_expression(node, parent: nil)
       splats, args, defaults = compile_function_arguments(node)
       body, vars = with_scope(traversable: true) do
@@ -434,9 +453,7 @@ module RBS
       vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
 
       body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
-      body = body.empty? ? "{}" : "{\n#{body}\n}"
-
-      "function (#{args.join(', ')}) #{body}"
+      "function (#{args.join(', ')}) #{block body}"
     end
 
     def compile_vars(vars)
@@ -446,7 +463,6 @@ module RBS
         ""
       end
     end
-
 
     def compile_group_expression(node)
       "(" + compile_expression(node.expression) + ")"
@@ -478,17 +494,41 @@ module RBS
     end
 
     def compile_call_expression(node)
-      callee = if node.callee === :identifier && node.callee.name == "super"
-                 "Object.getPrototypeOf(this).#{@functions.last}"
-               else
-                 compile_expression(node.callee)
-               end
+      if node.callee === :identifier && node.callee.name == "super"
+        return compile_super_expression(node)
+      end
+
+      callee = compile_expression(node.callee)
 
       case args = compile_call_arguments(node)
       when String
         "#{callee}.apply(null, #{args})"
       when Array
         "#{callee}(#{args.join(', ')})"
+      end
+    end
+
+    def compile_super_expression(node)
+      obj, fn = @objects.last, @functions.last
+      callee = if fn == "constructor"
+                 obj[:parent]
+               else
+                 "#{obj[:parent]}.#{fn}"
+               end
+
+      unless node.respond_to?(:arguments)
+        return "#{callee}.apply(this, arguments)"
+      end
+
+      if node.arguments.empty?
+        return "#{callee}.call(this)"
+      end
+
+      case args = compile_call_arguments(node)
+      when String
+        "#{callee}.apply(this, #{args})"
+      when Array
+        "#{callee}.call(this, #{args.join(', ')})"
       end
     end
 
@@ -563,6 +603,10 @@ module RBS
 
     private
 
+    def block(body)
+      body.to_s.empty? ? "{}" : "{\n#{body}\n}"
+    end
+
     def ungroup_expression(node)
       node === :group_expression ? node.expression : node
     end
@@ -625,6 +669,13 @@ module RBS
     #             end
     #  Node.new(:binary_expression, operator: operator, left: node.left, right: right)
     #end
+
+    def with_object(name, parent)
+      @objects << { name: name, parent: parent }
+      yield
+    ensure
+      @objects.pop
+    end
 
     def with_function(id)
       @functions << compile_expression(id)
