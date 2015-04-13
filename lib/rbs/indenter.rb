@@ -7,24 +7,36 @@ module RBS
     end
 
     def compile(type: "iife", spaces: 2)
-      output = @formatter.compile(type: type)
+      formatted = @formatter.compile(type: type)
+      indent(formatted, spaces: spaces)
+    end
+
+    private
+
+    def indent(output, spaces:)
       deep = 0
       indent = " " * spaces
 
       output.each_line.map do |line|
-        if line =~ /\{\s*\Z/
+        if line =~ /\A\s*\}/
+          deep -= 1
+        elsif line =~ /\{\s*\Z/
           rs = indent * deep
           deep += 1
-        elsif line =~ /\A\s*\}/
-          deep -= 1
         end
 
         if line =~ /\A\s*\Z/
-          "\n"
+          rs = "\n"
         else
           rs ||= indent * deep
-          rs + line
+          rs += line.strip + "\n"
         end
+
+        if line =~ /\A\s*\}.+\{\s*\Z/
+          deep += 1
+        end
+
+        rs
       end.join
     end
   end
