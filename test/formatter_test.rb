@@ -340,20 +340,6 @@ class RBS::FormatterTest < Minitest::Test
       "class A < B; def constructor; end end")
   end
 
-  def test_super_in_class_methods
-    assert_format(/function A\(\) { B\.apply\(this, arguments\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
-      "class A < B; def constructor; super; end end")
-
-    assert_format(/function A\(\) { B\.call\(this\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
-      "class A < B; def constructor; super(); end end")
-
-    assert_format(/function A\(\) { B\.call\(this, a, 2\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
-      "class A < B; def constructor; super(a, 2); end end")
-
-    assert_format(/function A\(\) { B\.apply\(this, args\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
-      "class A < B; def constructor; super(*args); end end")
-  end
-
   def test_object_statement
     assert_format "var A = Object.create(Object);", "object A; end"
     assert_format "var A = Object.create(B);", "object A < B; end"
@@ -381,6 +367,48 @@ class RBS::FormatterTest < Minitest::Test
 
     assert_format "function A() {} A.B = Object.create(Object); A.B.foo = 'bar'; A.B.baz = function () { return this.foo; };",
       "class A; object B; foo = 'bar'; def baz; return this.foo; end; end; end"
+  end
+
+  def test_super_in_class_constructors
+    assert_format(/function A\(\) { B\.apply\(this, arguments\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
+      "class A < B; def constructor; super; end end")
+
+    assert_format(/function A\(\) { B\.call\(this\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
+      "class A < B; def constructor; super(); end end")
+
+    assert_format(/function A\(\) { B\.call\(this, a, 2\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
+      "class A < B; def constructor; super(a, 2); end end")
+
+    assert_format(/function A\(\) { B\.apply\(this, args\); } A\.prototype = Object\.create\(B\.prototype, .+\);/,
+      "class A < B; def constructor; super(*args); end end")
+  end
+
+  def test_super_in_class_methods
+    assert_format(/A\.prototype\.bar = function \(\) { B\.prototype\.bar\.apply\(this, arguments\); };/,
+      "class A < B; def bar; super; end end")
+
+    assert_format(/A\.prototype\.foo = function \(\) { B\.prototype\.foo\.call\(this\); };/,
+      "class A < B; def foo; super(); end end")
+
+    assert_format(/A\.prototype\.baz = function \(a\) { B\.prototype\.baz\.call\(this, a, 2\); };/,
+      "class A < B; def baz(a); super(a, 2); end end")
+
+    assert_format(/A\.prototype\.foo = function \(\) { B\.prototype\.foo\.apply\(this, *args\); };/,
+      "class A < B; def foo; super(*args); end end")
+  end
+
+  def test_super_in_object_methods
+    assert_format(/A.bar = function \(\) { B.bar\.apply\(this, arguments\); };/,
+      "object A < B; def bar; super; end end")
+
+    assert_format(/A.foo = function \(\) { B.foo\.call\(this\); };/,
+      "object A < B; def foo; super(); end end")
+
+    assert_format(/A.baz = function \(a\) { B.baz\.call\(this, a, 2\); };/,
+      "object A < B; def baz(a); super(a, 2); end end")
+
+    assert_format(/A.foo = function \(\) { B.foo\.apply\(this, *args\); };/,
+      "object A < B; def foo; super(*args); end end")
   end
 
   def test_parse_new_expression

@@ -318,6 +318,24 @@ module RBS
       name = compile_expression(id)
       parent = node.parent ? compile_expression(node.parent) : "Object"
 
+      with_object(:object, name, parent) do
+        body = compile_object_body(:object, id, name, node)
+
+        if id === :identifier
+          "var #{name} = Object.create(#{parent});\n#{body}"
+        else
+          "#{name} = Object.create(#{parent});\n#{body}"
+        end
+      end
+    end
+
+    def compile_object_body(type, id, name, node)
+      obj = if type == :class
+              Node.new(:member_expression, object: id, property: Node.new(:identifier, name: "prototype"), computed: false)
+            else
+              id
+            end
+
       body = node.body.map do |stmt|
         case stmt.type
         when :object_statement
@@ -325,19 +343,20 @@ module RBS
         when :class_statement
           compile_class_statement(stmt, parent: id)
         when :function_statement
-          compile_function_statement(stmt, parent: id)
+          compile_function_statement(stmt, parent: obj)
         when :property
-          "#{name}.#{compile_expression(stmt.key)} = #{compile_expression(stmt.value)};"
+          key = if type == :class
+                  "#{name}.prototype.#{compile_expression(stmt.key)}"
+                else
+                  "#{name}.#{compile_expression(stmt.key)}"
+                end
+          "#{key} = #{compile_expression(stmt.value)};"
         else
           raise "unsupported object body statement"
         end
       end
 
-      if id === :identifier
-        "var #{name} = Object.create(#{parent});\n#{body.join("\n")}"
-      else
-        "#{name} = Object.create(#{parent});\n#{body.join("\n")}"
-      end
+      body.empty? ? "" : body.join("\n") + "\n"
     end
 
     # TODO: reopening class statements (ie. verify the class doesn't exist, yet)
@@ -351,12 +370,12 @@ module RBS
       name = compile_expression(id)
       parent = compile_expression(node.parent) if node.parent
 
-      with_object(name, parent) do
+      with_object(:class, name, parent) do
         definition = compile_class_constructor(id, name, node)
         definition += "\n#{name}.prototype = Object.create(#{parent}.prototype, {\n" <<
                         "constructor: { value: #{name}, enumerable: false, writable: true, configurable: true }\n" <<
                       "});" if node.parent
-        definition + "\n" + compile_class_body(id, name, node)
+        definition + "\n" + compile_object_body(:class, id, name, node)
       end
     end
 
@@ -388,26 +407,6 @@ module RBS
       else
         "#{name} = function (#{args.join(', ')}) #{block body};"
       end
-    end
-
-    def compile_class_body(id, name, node)
-      body = node.body.map do |stmt|
-        case stmt.type
-        when :object_statement
-          compile_object_statement(stmt, parent: id)
-        when :class_statement
-          compile_class_statement(stmt, parent: id)
-        when :function_statement
-          proto = Node.new(:member_expression, object: id, property: Node.new(:identifier, name: "prototype"), computed: false)
-          compile_function_statement(stmt, parent: proto)
-        when :property
-          "#{name}.prototype.#{compile_expression(stmt.key)} = #{compile_expression(stmt.value)};"
-        else
-          raise "unsupported class body statement"
-        end
-      end
-
-      body.empty? ? "" : body.join("\n") + "\n"
     end
 
     def compile_return_statement(node)
@@ -512,6 +511,8 @@ module RBS
       obj, fn = @objects.last, @functions.last
       callee = if fn == "constructor"
                  obj[:parent]
+               elsif obj[:type] == :class
+                 "#{obj[:parent]}.prototype.#{fn}"
                else
                  "#{obj[:parent]}.#{fn}"
                end
@@ -670,8 +671,8 @@ module RBS
     #  Node.new(:binary_expression, operator: operator, left: node.left, right: right)
     #end
 
-    def with_object(name, parent)
-      @objects << { name: name, parent: parent }
+    def with_object(type, name, parent)
+      @objects << { type: type, name: name, parent: parent }
       yield
     ensure
       @objects.pop
