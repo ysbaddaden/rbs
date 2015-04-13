@@ -75,6 +75,12 @@ class Minitest::Test
 
 
   def assert_format(expected, code)
-    assert_equal expected, format(code).gsub(/\s+/, " ").strip()
+    formatted = format(code).gsub(/\s+/, " ").strip()
+    case expected
+    when Regexp
+      assert_match expected, formatted
+    else
+      assert_equal expected, formatted
+    end
   end
 end

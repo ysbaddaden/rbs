@@ -26,10 +26,23 @@ class RBS::ParserTest < Minitest::Test
     assert_raises(RBS::ParseError) { parse("def f(*x, *y) end") }
   end
 
+  def test_class_statement
+    assert_statement :class_statement, "class X; end"
+    assert_statement({ id: :identifier, body: [] }, "class Name; end")
+    assert_statement({ body: [:class_statement] }, "class A; class B; end; end")
+    assert_statement({ body: [:object_statement] }, "class A; object B; end; end")
+
+    assert_statement({ body: [:function_statement, :function_statement] }, "class X; def foo; end; def bar() end end")
+    assert_statement({ body: [:property, :function_statement] }, "class X; foo = 1; def getFoo() end end")
+    assert_raises(RBS::ParseError) { parse("class X; self.foo = 1; end") }
+    assert_raises(RBS::ParseError) { parse("class X; def self.getFoo; end end") }
+  end
+
   def test_object_statement
     assert_statement :object_statement, "object X; end"
     assert_statement({ id: :identifier, body: [] }, "object Name; end")
     assert_statement({ body: [:object_statement] }, "object A; object B; end; end")
+    assert_statement({ body: [:class_statement] }, "object A; class B; end; end")
 
     assert_statement({ body: [:function_statement, :function_statement] }, "object X; def foo; end; def bar() end end")
     assert_statement({ body: [:property, :function_statement] }, "object X; foo = 1; def getFoo() end end")

@@ -1,6 +1,6 @@
 module RBS
   KEYWORDS = %i(
-    def delete return then do end prototype object
+    def delete return then do end class object
     if unless else elsif case when while until loop for in own of
     break next new begin rescue ensure
     and or not typeof instanceof

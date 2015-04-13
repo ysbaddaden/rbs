@@ -37,7 +37,6 @@ module RBS
       statements
     end
 
-    # TODO: prototype definitions
     # TODO: parse for statement modifier
     def parse_statement
       stmt = case lookahead.name
@@ -46,7 +45,7 @@ module RBS
              when :LF
                expect(:LF)
                return node(:empty_statement)
-             when :prototype, :def, :object, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :begin
+             when :class, :object, :def, :if, :unless, :case, :while, :until, :loop, :case, :for, :return, :delete, :begin
                __send__("parse_#{lookahead.name}_statement")
              when :break, :next
                node("#{lex.name}_statement")
@@ -143,6 +142,17 @@ module RBS
 
     def parse_object_statement
       expect(:object)
+      id, parent, body = parse_object_definition
+      node(:object_statement, id: id, parent: parent, body: body)
+    end
+
+    def parse_class_statement
+      expect(:class)
+      id, parent, body = parse_object_definition
+      node(:class_statement, id: id, parent: parent, body: body)
+    end
+
+    def parse_object_definition
       id = parse_member_expression(allow_calls: false)
 
       if match('<')
@@ -160,6 +170,9 @@ module RBS
         elsif match(:object)
           body << parse_object_statement
           next
+        elsif match(:class)
+          body << parse_class_statement
+          next
         elsif match(:def)
           body << parse_def_statement(allow_member: false)
         elsif lookahead === :identifier
@@ -175,7 +188,7 @@ module RBS
       expect(:end)
       expect(:LF) unless match(:EOF)
 
-      node(:object_statement, id: id, parent: parent, body: body)
+      [id, parent, body]
     end
 
     # TODO: begin/end without rescue/ensure should be a block_statement (ie. isolated scope)

@@ -1,0 +1,82 @@
+class A
+  foo = "foo"
+  bar = "bar"
+
+  def initialize(x = "A")
+    this.x = x
+  end
+
+  def get(attrName)
+    return this[attrName]
+  end
+end
+
+class B < A
+end
+
+class C < B
+  def initialize
+    super "C"
+  end
+end
+
+class FooError < Error
+end
+
+object Foo
+  class Error < Error
+  end
+
+  class E < A
+    def initialize
+      super "E"
+    end
+  end
+end
+
+suite "classes", -> {
+  a = new A
+  b = new B
+  c = new C
+  y = new A("Y")
+
+  test "attributes", -> {
+    assert.equal "foo", a.foo
+    assert.equal "bar", a.bar
+  }
+
+  test "methods", -> {
+    assert.equal "foo", a.get('foo')
+    assert.equal "bar", a.get('bar')
+  }
+
+  test "inherited attributes and methods", -> {
+    assert.equal "bar", c.bar
+    assert.equal "foo", c.get('foo')
+  }
+
+  test "initialize + super", -> {
+    assert.equal "A", a.x
+    assert.equal "A", b.x
+    assert.equal "Y", y.x
+    assert.equal "C", c.x
+  }
+
+  test "inherits from Error", -> {
+    err = new FooError("oops")
+    assert.equal "FooError", err.name
+    assert.equal "oops", err.message
+    assert.equal "FooError: oops", err.toString()
+    refute.equal undefined, err.stack
+
+    err = new Foo.Error("oopsie")
+    assert.equal "Foo.Error", err.name
+    assert.equal "oopsie", err.message
+    assert.equal "Foo.Error: oopsie", err.toString()
+    refute.equal undefined, err.stack
+  }
+
+  test "nested classes", -> {
+    assert.equal "E", (new Foo.E).x
+  }
+}

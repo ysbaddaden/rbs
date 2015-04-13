@@ -319,6 +319,18 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "var a; a = {}; a.b = 1;", "a = {}; a.b = 1"
   end
 
+  def test_class_statement
+    assert_format(/function A\(\) {.+}/, "class A; end")
+    assert_format(/function A\(\) {.+} A.prototype = Object\.create\(B\.prototype, .+\);/, "class A < B; end")
+    assert_format(/function Post\(\) {.+} Post.prototype = Object\.create\(Some\.Extern\.Model\.prototype, .+\);/, "class Post < Some.Extern.Model; end")
+
+    assert_format(/function A\(\) {.+} A\.prototype\.name = 'class A'; A\.prototype\.prop = 123;/,
+      "class A; name = 'class A'; prop = 123; end")
+
+    assert_format(/function A\(\) {.+} A\.prototype\.add = function \(a, b\) { return a \+ b; };/,
+      "class A; def add(a, b); return a + b; end; end")
+  end
+
   def test_object_statement
     assert_format "var A = Object.create(Object);", "object A; end"
     assert_format "var A = Object.create(B);", "object A < B; end"
@@ -331,7 +343,7 @@ class RBS::FormatterTest < Minitest::Test
       "object A; def add(a, b); return a + b; end; end"
   end
 
-  def test_nested_object_statements
+  def test_nested_object_and_class_statements
     assert_format "var A = Object.create(Object); A.B = Object.create(Object);",
       "object A; object B; end; end"
 
@@ -340,6 +352,12 @@ class RBS::FormatterTest < Minitest::Test
 
     assert_format "var A = Object.create(Object); A.B = Object.create(Object); A.B.foo = 'bar'; A.B.baz = function () { return this.foo; };",
       "object A; object B; foo = 'bar'; def baz; return this.foo; end; end; end"
+
+    assert_format(/var A = Object\.create\(Object\); A.B = function \(\) {.+}; A\.B\.prototype\.foo = 'bar'; A\.B\.prototype\.baz = function \(\) { return this\.foo; };/,
+      "object A; class B; foo = 'bar'; def baz; return this.foo; end; end; end")
+
+    assert_format(/var A = function \(\) {.+}; A.B = Object\.create\(Object\); A\.B\.foo = 'bar'; A\.B\.baz = function \(\) { return this\.foo; };/,
+      "object A; class B; foo = 'bar'; def baz; return this.foo; end; end; end")
   end
 
   def test_parse_new_expression
