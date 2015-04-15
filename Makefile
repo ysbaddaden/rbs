@@ -9,7 +9,7 @@ tmp/integration/%.js: test/integration/%.rbs
 
 test: $(TEST_OUTPUTS)
 	node_modules/.bin/mocha --ui tdd \
-		test/integration/test_helper.js tmp/integration/*_test.js \
+		test/integration/test_helper.js tmp/integration/*_test.js
 
 clean:
 	rm -rf tmp/integration/*_test.js

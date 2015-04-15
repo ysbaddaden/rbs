@@ -18,3 +18,15 @@ Rake::RDocTask.new do |rdoc|
   rdoc.rdoc_files.include("README.rdoc", "lib/**/*.rb")
   rdoc.options << "--charset=utf-8"
 end
+
+desc 'Enumerate all annotations'
+task :notes do
+  Dir['{lib,test}/**/*.rb'].each do |filename|
+    notes = File.readlines(filename).grep(/(note|todo|optimize|fixme):/i)
+    next if notes.empty?
+
+    puts filename
+    puts notes.map { |note| note.gsub(/^\s*#\s*/, "").chomp }.join("\n")
+    puts
+  end
+end
