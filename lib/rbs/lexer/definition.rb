@@ -4,15 +4,15 @@ module RBS
     if unless else elsif case when while until loop for in own of
     break next new begin rescue ensure
     and or not typeof instanceof
-  )
+  ) # =>
 
   OPERATORS = %i(
     -> += -= *= /= %= &= |= ^= ||= >>= <<=
-    + - ~ * / % && || & | ^ << >> == != <= >= => < >
+    + - ~ * / % && || & | ^ << >> == != <= >= < >
     ... .. . , = : ? !
   )
   ASSIGNMENT_OPERATOR = %i(= += -= *= /= %= &= |= ^= ||= >>= <<=)
-  BINARY_OPERATOR = %i(+ - ~ * / % && || & | ^ << >> == != <= >= => < > ... ..)
+  BINARY_OPERATOR = %i(+ - ~ * / % && || & | ^ << >> == != <= >= < > ... ..)
   UNARY_OPERATOR = %i(+ - ~ ! typeof)
 
   PARENS = %i(\( \) { } [ ])

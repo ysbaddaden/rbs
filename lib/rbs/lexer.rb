@@ -57,6 +57,7 @@ module RBS
         elsif     str.match(RE::STRING2)    then embedable_string('"', '"')
         elsif     str.match(RE::STRING3)    then embedable_string($1, closing_quote($1))
         elsif m = str.match(RE::KEYWORDS)   then name = m[0]
+        elsif m = str.match(/\A(=>)/)       then name = m[0]
         elsif m = str.match(RE::OPERATORS)  then name = m[0]
         elsif m = str.match(RE::PARENS)     then name = m[0]
         elsif m = str.match(RE::IDENTIFIER) then name = :identifier

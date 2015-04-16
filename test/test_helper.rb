@@ -42,7 +42,11 @@ class Minitest::Test
   def assert_ast(expected, expression)
     case expected
     when Symbol, String
-      assert_equal expected.to_sym, expression.type
+      if expression.respond_to?(:type)
+        assert_equal expected.to_sym, expression.type
+      else
+        assert_equal expected, expression
+      end
     when Hash
       expected.each do |param, expect|
         assert_respond_to expression, param.to_sym

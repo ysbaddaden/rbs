@@ -295,8 +295,17 @@ class RBS::ParserTest < Minitest::Test
     RBS::BINARY_OPERATOR.each do |op|
       assert_expression :binary_expression, "a #{op} b"
     end
+
     assert_expression :binary_expression, "a == !b"
     assert_expression :binary_expression, "!a == b"
+  end
+
+  def test_binary_expression_precedence
+    assert_expression({ operator: '-', left: { operator: '+', right: { operator: '*' } } }, "a + 1 * 2 - 4")
+    assert_expression({ operator: '&&' }, "a > 10 && a < 100")
+    assert_expression({ operator: '||' }, "bits & 2 || bits & 4")
+    assert_expression({ operator: '||', right: { operator: '&&', left: { operator: '|' }, right: { operator: '+' } } },
+      "bits & 2 || bits | 4 && bits + 8")
   end
 
   def test_parse_new_expression

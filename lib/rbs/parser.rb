@@ -5,6 +5,32 @@ module RBS
   LHS = %i(identifier member_expression)
   INLINE_TERM = %i(EOF else elsif end when })
 
+  BINARY_PRECEDENCE = {
+    '||'  => 1,
+    '&&'  => 2,
+    '|'   => 3,
+    '^'   => 4,
+    '&'   => 5,
+    '=='  => 6,
+    '!='  => 6,
+    '<'   => 7,
+    '>'   => 7,
+    '<='  => 7,
+    '>='  => 7,
+   #'instanceof' => 7,
+    '<<'  => 8,
+    '>>'  => 8,
+   #'>>>' => 8,
+    '+'   => 9,
+    '-'   => 9,
+    '*'   => 11,
+    '/'   => 11,
+    '%'   => 11,
+    '~'   => 12,
+    '...' => 12,
+    '..'  => 12,
+  }
+
   # The parser is heavily influenced by Esprima's parser:
   # http://esprima.org/
   #
@@ -382,16 +408,45 @@ module RBS
       end
     end
 
+    # FIXME: apply operator precedence (logical > binary)
     # TODO: differentiate logical from binary expressions
-    # TODO: apply operator precedence (logical > binary)
+    #
+    # The whole operator precedence logic is a copy-paste from esprima:
+    # http://esprima.org/
     def parse_binary_expression
       left = parse_unary_expression
+      return left unless match(BINARY_OPERATOR)
 
-      if match(BINARY_OPERATOR)
-        node(:binary_expression, operator: lex.value, left: left, right: parse_expression)
-      else
-        left
+      token = lex
+      right = parse_unary_expression
+
+      token.precedence = binary_precedence(token)
+      stack = [left, token, right]
+
+      while (precedence = binary_precedence(lookahead)) > 0
+        while (stack.size > 2) && (precedence <= stack[-2].precedence)
+          right = stack.pop
+          operator = stack.pop.value
+          left = stack.pop
+          stack << node(:binary_expression, operator: operator, left: left, right: right)
+        end
+
+        token = lex
+        token.precedence = precedence
+
+        stack << token
+        stack << parse_unary_expression
       end
+
+      i = stack.size - 1
+      expr = stack[i]
+
+      while i > 1
+        expr = node(:binary_expression, operator: stack[i - 1].value, left: stack[i - 2], right: expr)
+        i -= 2
+      end
+
+      expr
     end
 
     def parse_unary_expression
@@ -638,6 +693,10 @@ module RBS
         end
       end
       list.size != names.uniq.size
+    end
+
+    def binary_precedence(token)
+      BINARY_PRECEDENCE[token.name.to_s] || 0
     end
   end
 end

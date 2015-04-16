@@ -3,6 +3,7 @@ require 'rbs/lexer/definition'
 module RBS
   class Token
     attr_reader :name, :value, :line, :column
+    attr_accessor :precedence
 
     def initialize(name, value = nil, line = nil, column = nil)
       @name, @value, @line, @column = name.to_sym, value, line, column
