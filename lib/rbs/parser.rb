@@ -398,7 +398,7 @@ module RBS
 
     def parse_expression
       position_token = lookahead
-      left = parse_binary_expression
+      left = parse_conditional_expression
 
       if match(ASSIGNMENT_OPERATOR)
         syntax_error("Invalid left-hand side in assignment", position_token) unless valid_lhs?(left)
@@ -408,7 +408,20 @@ module RBS
       end
     end
 
-    # FIXME: apply operator precedence (logical > binary)
+    def parse_conditional_expression
+      left = parse_binary_expression
+
+      if match('?')
+        expect('?')
+        consequent = parse_expression
+        expect(':')
+        alternate = parse_expression
+        node(:conditional_expression, test: left, consequent: consequent, alternate: alternate)
+      else
+        left
+      end
+    end
+
     # TODO: differentiate logical from binary expressions
     #
     # The whole operator precedence logic is a copy-paste from esprima:

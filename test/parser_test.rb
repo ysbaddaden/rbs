@@ -317,4 +317,10 @@ class RBS::ParserTest < Minitest::Test
     assert_expression({ callee: :member_expression, arguments: [:identifier, :identifier] }, "new Foo.Bar(a, b)")
     assert_expression({ callee: :identifier, arguments: [:splat_expression, :object_expression] }, "new Foo(*args, a: 1, b: 2)")
   end
+
+  def test_conditional_expression
+    assert_expression :conditional_expression, "a ? b : c"
+    assert_expression({ test: :identifier, consequent: :identifier, alternate: :identifier }, "a ? b : c")
+    assert_expression({ right: :conditional_expression }, "x = a > 10 ? a - 1 : a + 2")
+  end
 end

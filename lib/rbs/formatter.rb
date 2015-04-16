@@ -419,18 +419,19 @@ module RBS
 
     def compile_expression(expr)
       case expr.type
-      when :identifier            then compile_identifier(expr)
-      when :literal               then expr.value
-      when :lambda_expression     then compile_lambda_expression(expr)
-      when :group_expression      then compile_group_expression(expr)
-      when :array_expression      then compile_array_expression(expr)
-      when :object_expression     then compile_object_expression(expr)
-      when :member_expression     then compile_member_expression(expr)
-      when :call_expression       then compile_call_expression(expr)
-      when :unary_expression      then compile_unary_expression(expr)
-      when :binary_expression     then compile_binary_expression(expr)
-      when :assignment_expression then compile_assignment_expression(expr)
-      when :new_expression        then compile_new_expression(expr)
+      when :identifier             then compile_identifier(expr)
+      when :literal                then expr.value
+      when :lambda_expression      then compile_lambda_expression(expr)
+      when :group_expression       then compile_group_expression(expr)
+      when :array_expression       then compile_array_expression(expr)
+      when :object_expression      then compile_object_expression(expr)
+      when :member_expression      then compile_member_expression(expr)
+      when :call_expression        then compile_call_expression(expr)
+      when :unary_expression       then compile_unary_expression(expr)
+      when :binary_expression      then compile_binary_expression(expr)
+      when :conditional_expression then compile_conditional_expression(expr)
+      when :assignment_expression  then compile_assignment_expression(expr)
+      when :new_expression         then compile_new_expression(expr)
       else
         raise "unsupported expression: #{expr.type}"
       end
@@ -595,6 +596,10 @@ module RBS
 
     def compile_binary_expression(node)
       [compile_expression(node.left), node.operator, compile_expression(node.right)].join(" ")
+    end
+
+    def compile_conditional_expression(node)
+      [compile_expression(node.test), "?", compile_expression(node.consequent), ":", compile_expression(node.alternate)].join(" ")
     end
 
     def compile_assignment_expression(node)

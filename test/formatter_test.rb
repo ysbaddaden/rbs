@@ -92,6 +92,11 @@ class RBS::FormatterTest < Minitest::Test
     end
   end
 
+  def test_conditional_expression
+    assert_format "a ? b : c;", "a ? b : c"
+    assert_format "var x; x = a > 10 ? a - 10 : a + 10;", "x = a > 10 ? a - 10 : a + 10"
+  end
+
   def test_assignment_expression
     RBS::ASSIGNMENT_OPERATOR.each do |op|
       assert_format "var a; a #{op} b;", "a #{op} b"
