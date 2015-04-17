@@ -2,9 +2,19 @@ require 'pp'
 require 'bundler'
 Bundler.require(:default, :test)
 require "minitest/autorun"
+require "minitest/mock"
 require "rbs"
 
 class Minitest::Test
+  def experimental
+    false
+  end
+
+  def with_experimental(bool = true)
+    stub(:experimental, bool) { yield }
+  end
+
+
   def lex(code)
     RBS::Rewriter.new(RBS::Lexer.new(code))
   end
@@ -14,7 +24,8 @@ class Minitest::Test
   end
 
   def format(code, type: "raw")
-    RBS::Formatter.new(RBS::Parser.new(lex(code))).compile(type: "raw")
+    RBS::Formatter.new(RBS::Parser.new(lex(code)))
+      .compile(type: "raw", experimental: experimental)
   end
 
 

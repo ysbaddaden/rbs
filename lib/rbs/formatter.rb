@@ -1,3 +1,5 @@
+require "rbs/formatter/negators"
+
 module RBS
   class Formatter
     attr_reader :parser
@@ -10,7 +12,9 @@ module RBS
       @reference = 0
     end
 
-    def compile(type: "iife")
+    def compile(type: "iife", experimental: false)
+      @experimental = experimental
+
       program, vars = with_scope(traversable: false) do
         compile_statements(@parser.parse.body)
       end
@@ -617,64 +621,13 @@ module RBS
       node === :group_expression ? node.expression : node
     end
 
-    def negation?(node)
-      node === :unary_expression && node.operator == "!"
-    end
-
-    # TODO: negate logical/binary expressions (when parser differenties & applies precedence)
     def negate(node)
-      if negation?(node)
-        #if node.argument === :logical_expression
-        #  negate_logical_expression(node.argument)
-        #elsif node.argument === :binary_expression
-        #  negate_binary_expression(node.argument)
-        #else
-          node.argument
-        #end
-      #elsif node === :logical_expression
-      #  negate_logical_expression(node)
-      #elsif node === :binary_expression
-      #  negate_binary_expression(node)
-      elsif node === %i(identifier literal group_expression)
-        Node.new(:unary_expression, operator: "!", argument: node)
+      if @experimental
+        RBS::Negators.experimental_negate(node)
       else
-        Node.new(:unary_expression, operator: "!", argument: Node.new(:group_expression, expression: node))
+        RBS::Negators.simple_negate(node)
       end
     end
-
-    #def negate_logical_expression(node)
-    #  left = if negation?(node.left)
-    #           node.left.argument
-    #         else
-    #           Node.new(:unary_expression, operator: "!", argument: node.left)
-    #         end
-    #  right = if node.right === %i(binary_expression logical_expression) || negation?(node.right)
-    #            negate(node.right)
-    #          else
-    #           Node.new(:unary_expression, operator: "!", argument: node.right)
-    #          end
-    #  operator = node.operator == "&&" ? "||" : "&&"
-    #  Node.new(:logical_expression, operator: operator, left: left, right: right)
-    #end
-
-    #def negate_binary_expression(node)
-    #  right = if node.right === :logical_expression
-    #            negate_logical_expression(node.right)
-    #          elsif node.right === :binary_expression
-    #            negate_binary_expression(node.right)
-    #          else
-    #            node.right
-    #          end
-    #  operator = case node.operator
-    #             when "==" then "!="
-    #             when "!=" then "=="
-    #             when ">=" then "<"
-    #             when "<=" then ">"
-    #             when ">"  then "<="
-    #             when "<"  then ">="
-    #             end
-    #  Node.new(:binary_expression, operator: operator, left: node.left, right: right)
-    #end
 
     def with_object(type, name, parent)
       @objects << { type: type, name: name, parent: parent }

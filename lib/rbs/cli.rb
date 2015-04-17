@@ -8,21 +8,27 @@ module RBS
     map "-v" => "version", "--version" => "version"
 
     desc "compile [INPUT]", "Compiles to JavaScript"
-    option :output,                                  aliases: %w(-o), desc: "Specify output file"
-    option :module,                 default: "iife", aliases: %w(-m), desc: "Either amd, iife or raw"
-    option :indent, type: :boolean, default: true
-    option :spaces, type: :numeric, default: 2
+    option :output,                                        aliases: %w(-o), desc: "Specify output file"
+    option :module,                       default: "iife", aliases: %w(-m), desc: "Either amd, iife or raw"
+    option :experimental, type: :boolean, default: false,  aliases: %w(-e), desc: "Enable experimental features"
+    option :indent,       type: :boolean, default: true
+    option :spaces,       type: :numeric, default: 2
 
     def compile(input = nil)
       source = read(input)
       parser = RBS::Parser.new(RBS::Rewriter.new(RBS::Lexer.new(source)))
       formatter = RBS::Formatter.new(parser)
 
+      formatter_options = {
+        type: options[:module],
+        experimental: options[:experimental]
+      }
+
       code = if options[:indent]
                indenter = RBS::Indenter.new(formatter)
-               indenter.compile(type: options[:module], spaces: options[:spaces])
+               indenter.compile(spaces: options[:spaces], **formatter_options)
              else
-               formatter.compile(type: options[:module])
+               formatter.compile(formatter_options)
              end
 
       if options[:output].nil? || options[:output] == "-"

@@ -136,33 +136,42 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "if (!test) { d; c; b; }", "unless test; d; c; b; end"
     assert_format "if (a) {}", "unless !a; end"
 
-    assert_format "if (a > b) {}", "unless !(a > b); end"
-    assert_format "if (!(a > b)) {}", "unless (a > b); end"
+    with_experimental(false) do
+      assert_format "if (a > b) {}", "unless !(a > b); end"
+      assert_format "if (!(a > b)) {}", "unless (a > b); end"
 
-    assert_format "if (!(a && b)) {}", "unless a && b; end"
-    assert_format "if (!(a && !b && c)) {}", "unless a && !b && c; end"
-    assert_format "if (!((a && b) || !(c && d))) {}", "unless (a && b) || !(c && d); end"
-    assert_format "if (!(!a > b)) {}", "unless !a > b; end"
+      assert_format "if (!(a && b)) {}", "unless a && b; end"
+      assert_format "if (!(a && !b && c)) {}", "unless a && !b && c; end"
+      assert_format "if (!((a && b) || !(c && d))) {}", "unless (a && b) || !(c && d); end"
+      assert_format "if (!(!a > b)) {}", "unless !a > b; end"
+    end
 
-    #assert_format "if (a <= b) {}", "unless a > b; end"
-    #assert_format "if (a < b) {}",  "unless a >= b; end"
-    #assert_format "if (a == b) {}", "unless a != b; end"
-    #assert_format "if (a != b) {}", "unless a == b; end"
-    #assert_format "if (a >= b) {}", "unless a < b; end"
-    #assert_format "if (a <= b) {}", "unless a > b; end"
-    #assert_format "if (a > b) {}",  "unless a <= b; end"
-    #assert_format "if (a < b) {}",  "unless a >= b; end"
+    with_experimental(true) do
+      assert_format "if (a <= b) {}", "unless a > b; end"
+      assert_format "if (a < b) {}",  "unless a >= b; end"
+      assert_format "if (a == b) {}", "unless a != b; end"
+      assert_format "if (a != b) {}", "unless a == b; end"
+      assert_format "if (a >= b) {}", "unless a < b; end"
+      assert_format "if (a <= b) {}", "unless a > b; end"
+      assert_format "if (a > b) {}",  "unless a <= b; end"
+      assert_format "if (a < b) {}",  "unless a >= b; end"
 
-    #assert_format "if (!a || !b) {}", "unless a && b; end"
-    #assert_format "if (!a || b || !c) {}", "unless a && !b && c; end"
-    #assert_format "if (!(a && b) && (c && d)) {}", "unless (a && b) || !(c && d); end"
+      assert_format "if (!(a + b)) {}",  "unless a + b; end"
+      assert_format "if (!(a & b)) {}",  "unless a & b; end"
 
-    #assert_format "if (a >= b && c || !d) {}", "unless a < b || !c && d; end"
-    #assert_format "if (a != b && c != d) {}", "unless a == b || c == d; end"
-    #assert_format "if (a != b && c <= d && e > f) {}", "unless a == b || c > d || e <= f; end"
+      assert_format "if (!a || !b) {}", "unless a && b; end"
+      assert_format "if (a || b) {}", "unless !a && !b; end"
+      assert_format "if (!a || !b || !c) {}", "unless a && b && c; end"
+      assert_format "if (!a || b || !c) {}", "unless a && !b && c; end"
+      assert_format "if (!(a && b) && (c && d)) {}", "unless (a && b) || !(c && d); end"
 
-    #assert_format "if (!a <= b) {}", "unless !a > b; end"
-    #assert_format "if (!a != b || c >= d) {}", "unless !a == b && c < d; end"
+      assert_format "if (a >= b && c || !d) {}", "unless a < b || !c && d; end"
+      assert_format "if (a != b && c != d) {}", "unless a == b || c == d; end"
+      assert_format "if (a != b && c <= d && e > f) {}", "unless a == b || c > d || e <= f; end"
+
+      assert_format "if (!a <= b) {}", "unless !a > b; end"
+      assert_format "if (!a != b || c >= d) {}", "unless !a == b && c < d; end"
+    end
   end
 
   def test_case_statement
@@ -183,13 +192,26 @@ class RBS::FormatterTest < Minitest::Test
     assert_format "while (!test) { d; c; b; }", "until test; d; c; b; end"
     assert_format "while (a) {}", "until !a; end"
 
-    assert_format "while (a > b) {}", "until !(a > b); end"
-    assert_format "while (!(a > b)) {}", "until (a > b); end"
+    with_experimental(false) do
+      assert_format "while (a > b) {}", "until !(a > b); end"
+      assert_format "while (!(a > b)) {}", "until (a > b); end"
 
-    assert_format "while (!(a && b)) {}", "until a && b; end"
-    assert_format "while (!(a && !b && c)) {}", "until a && !b && c; end"
-    assert_format "while (!((a && b) || !(c && d))) {}", "until (a && b) || !(c && d); end"
-    assert_format "while (!(!a > b)) {}", "until !a > b; end"
+      assert_format "while (!(a && b)) {}", "until a && b; end"
+      assert_format "while (!(a && !b && c)) {}", "until a && !b && c; end"
+      assert_format "while (!((a && b) || !(c && d))) {}", "until (a && b) || !(c && d); end"
+      assert_format "while (!(!a > b)) {}", "until !a > b; end"
+    end
+
+    with_experimental(true) do
+      assert_format "while (a > b) {}", "until !(a > b); end"
+      assert_format "while (a <= b) {}", "until a > b; end"
+      assert_format "while (!(a > b)) {}", "until (a > b); end"
+
+      assert_format "while (!a || !b) {}", "until a && b; end"
+      assert_format "while (!a || b || !c) {}", "until a && !b && c; end"
+      assert_format "while (!(a && b) && (c && d)) {}", "until (a && b) || !(c && d); end"
+      assert_format "while (!a <= b) {}", "until !a > b; end"
+    end
   end
 
   def test_loop_statement
