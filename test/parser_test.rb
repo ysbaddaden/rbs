@@ -176,12 +176,12 @@ class RBS::ParserTest < Minitest::Test
     assert_statement :if_statement, "tom if jerry"
     assert_statement :if_statement, "break if jerry"
     assert_statement({ test: :call_expression, consequent: :block_statement }, "a += 1 if match(a)")
-    assert_statement({ test: :identifier, consequent: { body: [:assignment_expression] } }, "a += 1 if increment")
+    assert_statement({ test: :identifier, consequent: { body: [:expression_statement] } }, "a += 1 if increment")
 
     assert_statement :unless_statement, "tom unless jerry"
     assert_statement :unless_statement, "return unless jerry"
     assert_statement({ test: :identifier, consequent: :block_statement }, "tom unless jerry")
-    assert_statement({ test: :identifier, consequent: { body: [:identifier] } }, "tom unless coyote")
+    assert_statement({ test: :identifier, consequent: { body: [:expression_statement] } }, "tom unless coyote")
 
     assert_statement :while_statement, "tom while jerry"
     assert_statement :while_statement, "next while jerry"

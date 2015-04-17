@@ -383,13 +383,12 @@ module RBS
     # TODO: parse for statement modifier
     def parse_expression_statement
       expr = parse_expression
+      stmt = node(:expression_statement, expression: expr)
 
       if match %i(if unless while until)
         token = expect(:if, :unless, :while, :until)
-        block = node(:block_statement, body: [expr])
+        block = node(:block_statement, body: [stmt])
         stmt = node("#{token.name}_statement", test: parse_expression, consequent: block, alternate: nil)
-      else
-        stmt = node(:expression_statement, expression: expr)
       end
 
       expect_terminator
