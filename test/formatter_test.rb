@@ -425,17 +425,37 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_super_in_object_methods
-    assert_format(/A.bar = function \(\) { B.bar\.apply\(this, arguments\); };/,
+    assert_format(/A.bar = function \(\) { B\.bar\.apply\(this, arguments\); };/,
       "object A < B; def bar; super; end end")
 
-    assert_format(/A.foo = function \(\) { B.foo\.call\(this\); };/,
+    assert_format(/A.foo = function \(\) { B\.foo\.call\(this\); };/,
       "object A < B; def foo; super(); end end")
 
-    assert_format(/A.baz = function \(a\) { B.baz\.call\(this, a, 2\); };/,
+    assert_format(/A.baz = function \(a\) { B\.baz\.call\(this, a, 2\); };/,
       "object A < B; def baz(a); super(a, 2); end end")
 
-    assert_format(/A.foo = function \(\) { B.foo\.apply\(this, *args\); };/,
+    assert_format(/A.foo = function \(\) { B\.foo\.apply\(this, *args\); };/,
       "object A < B; def foo; super(*args); end end")
+  end
+
+  def test_self_in_functions_and_object_and_class_methods
+    assert_format(/function set\(k, v\) { self\.attrs\[k\] = v; }/, "def set(k, v); self.attrs[k] = v; end")
+    assert_format(/function \(k\) { return k\.self; }/, "object Post; def set(k); return k.self; end; end")
+
+    assert_format(/function \(\) { var self = this; return self; }/,
+      "object Post; def get(); return self; end; end")
+
+    assert_format(/function \(\) { var self = this, x; x = self; }/,
+      "object Post; def get(); x = self; end; end")
+
+    assert_format(/function \(k, v\) { var self = this; self\.attrs\[k\] = v; }/,
+      "object Post; def set(k, v); self.attrs[k] = v; end; end")
+
+    assert_format(/function \(k, v\) { var self = this; self\.attrs\[k\] = v; }/,
+      "class Post; def set(k, v); self.attrs[k] = v; end; end")
+
+    assert_format(/function \(\) { var self = this; function \(\) { self; }; }/,
+      "class Post; def lmbd(); -> { self }; end; end")
   end
 
   def test_parse_new_expression

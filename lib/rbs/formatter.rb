@@ -244,28 +244,29 @@ module RBS
     end
 
     def compile_function_statement(node, parent: nil)
-      id = if parent
-             Node.new(:member_expression, object: parent, property: node.id, computed: false)
-           else
-             node.id
-           end
-      name = compile_expression(id)
-      args, body = compile_function_body(node)
+      args, body = compile_function_body(node, may_have_self: !!parent)
 
-      if id === :identifier
-        "function #{name}(#{args.join(', ')}) #{block body}"
+      if node.id === :identifier && !parent
+        "function #{node.id.name}(#{args.join(', ')}) #{block body}"
       else
+        parent = compile_expression(parent) + "." if parent
+        name = parent.to_s + compile_expression(node.id)
         "#{name} = function (#{args.join(', ')}) #{block body};"
       end
     end
 
-    def compile_function_body(node)
+    def compile_function_body(node, may_have_self: false)
       with_function(node.id) do
         splats, args, defaults = compile_function_arguments(node)
-        body, vars = with_scope(traversable: false) do
+
+        body, vars = with_scope(traversable: false, may_have_self: may_have_self) do
           compile_statements(node.block.body)
         end
-        vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
+
+        vars -= node.arguments.map do |arg|
+          arg.respond_to?(:name) ? arg.name : arg.expression.name
+        end
+
         body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
         [args, body]
       end
@@ -311,7 +312,6 @@ module RBS
     end
 
     # TODO: reopening object statements (ie. verify the object doesn't exist, yet)
-    # TODO: assign self = this in object methods (when needed)
     def compile_object_statement(node, parent: nil)
       id = if parent
              Node.new(:member_expression, object: parent, property: node.id, computed: false)
@@ -364,7 +364,6 @@ module RBS
     end
 
     # TODO: reopening class statements (ie. verify the class doesn't exist, yet)
-    # TODO: assign self = this in class methods (when needed)
     def compile_class_statement(node, parent: nil)
       id = if parent
              Node.new(:member_expression, object: parent, property: node.id, computed: false)
@@ -400,7 +399,7 @@ module RBS
              end
 
       if stmt
-        args, tmp = compile_function_body(stmt)
+        args, tmp = compile_function_body(stmt, may_have_self: true)
         body = body ? body + "\n" + tmp : tmp
       elsif node.parent && body.nil?
         body = "#{compile_expression(node.parent)}.apply(this, arguments);"
@@ -441,20 +440,25 @@ module RBS
       end
     end
 
-    def compile_identifier(node)
+    def compile_identifier(node, define_self: true)
       if node.name == "super"
         compile_super_expression(node)
       else
+        declare_self_variable if define_self && node.name == "self"
         node.name
       end
     end
 
+    # OPTIMIZE: reduce duplication with compile_function_body
     def compile_lambda_expression(node, parent: nil)
       splats, args, defaults = compile_function_arguments(node)
       body, vars = with_scope(traversable: true) do
         compile_statements(node.block.body)
       end
-      vars -= node.arguments.map { |arg| arg.name rescue arg.expression.name }
+
+      vars -= node.arguments.map do |arg|
+        arg.respond_to?(:name) ? arg.name : arg.expression.name
+      end
 
       body = [splats, defaults, compile_vars(vars).chomp, body].reject(&:empty?).join("\n")
       "function (#{args.join(', ')}) #{block body}"
@@ -489,11 +493,12 @@ module RBS
     end
 
     def compile_member_expression(node)
-      object, property = compile_expression(node.object), compile_expression(node.property)
+      object = compile_expression(node.object)
+
       if node.computed
-        "#{object}[#{property}]"
+        "#{object}[#{compile_expression(node.property)}]"
       else
-        "#{object}.#{property}"
+        "#{object}.#{compile_identifier(node.property, define_self: false)}"
       end
     end
 
@@ -514,12 +519,12 @@ module RBS
 
     def compile_super_expression(node)
       obj, fn = @objects.last, @functions.last
-      callee = if fn == "constructor"
+      callee = if fn[:name] == "constructor"
                  obj[:parent]
                elsif obj[:type] == :class
-                 "#{obj[:parent]}.prototype.#{fn}"
+                 "#{obj[:parent]}.prototype.#{fn[:name]}"
                else
-                 "#{obj[:parent]}.#{fn}"
+                 "#{obj[:parent]}.#{fn[:name]}"
                end
 
       unless node.respond_to?(:arguments)
@@ -637,14 +642,14 @@ module RBS
     end
 
     def with_function(id)
-      @functions << compile_expression(id)
+      @functions << { name: compile_expression(id), self: false }
       yield
     ensure
       @functions.pop
     end
 
-    def with_scope(traversable:)
-      @scopes << { vars: [], traversable: traversable }
+    def with_scope(traversable:, may_have_self: false)
+      @scopes << { vars: [], traversable: traversable, may_have_self: may_have_self}
       [yield, @scopes.pop[:vars]]
     end
 
@@ -654,6 +659,16 @@ module RBS
         break unless scope[:traversable]
       end
       @scopes.last[:vars] << name
+    end
+
+    def declare_self_variable
+      @scopes.reverse_each do |scope|
+        if scope[:may_have_self]
+          scope[:vars] << "self = this" unless scope[:vars].include?("self = this")
+          break
+        end
+        break unless scope[:traversable]
+      end
     end
 
     # TODO: generate nicer variables like a, b or c (depending on the availablity in the scope)
