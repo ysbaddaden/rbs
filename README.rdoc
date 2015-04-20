@@ -5,21 +5,46 @@ is to bring some sanity to Browser programming with a simple, beautiful and zen
 language.
 
 While {Opal}[http://opalrb.org/] aims to implement Ruby over the JavaScript
-language, RBS aims to bring only a subset of the Ruby language so it's possible
+language, RBS aims to only bring a subset of the Ruby language so it's possible
 to develop for any existing framework (eg: backbone, angular, ember), or even
 drop RBS in favor to the compiled JavaScript (why not?)
 
+
 == Status
 
-This is a work-in-progress, and shoud be considered alpha software. While the
-lexer appears to be quite robust now, the parser and ES5 formatter still have a
-long way to go (eg: support lambdas, auto returning expression statements, ...)
+This is a work-in-progress, and should be considered alpha software. Most of the
+features have been implemented by now, but there must be countless bugs that
+need to be fixed.
 
-Hunt for "TODO:" in the source code!
+The lexer is quite robust, yet the parser and the ES5 formatter still need more
+thorought testing, and will need some refactoring; moving the RBS specific logic
+from RBS::Formatter to to RBS::Parser::Rewriter for instance.
+
+
+== Usage
+
+Compile RBS to JavaScript:
+
+ $ rbs compile file.rbs -o file.js
+
+Pipe compile RBS code, to a JavaScript interpreter for instance:
+
+ $ rbs compile file.rbs | node
+
+
+== Contribute
+
+Try the language and {report any issues}[https://github.com/ysbaddaden/rbs/issues]
+you might have.
+
+Hunt for "TODO:" in the source code, or run <tt>rake notes</tt> to see some
+things that need to be done. Then start hacking!
+
 
 == License
 
 RBS is distributed under the MIT license.
+
 
 == Authors
 
