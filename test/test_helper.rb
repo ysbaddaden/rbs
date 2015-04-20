@@ -20,12 +20,12 @@ class Minitest::Test
   end
 
   def parse(code)
-    RBS::Parser.new(lex(code)).parse
+    RBS::Parser::Rewriter.new(RBS::Parser.new(lex(code))).parse
   end
 
   def format(code, type: "raw")
-    RBS::Formatter.new(RBS::Parser.new(lex(code)))
-      .compile(type: "raw", experimental: experimental)
+    parser = RBS::Parser::Rewriter.new(RBS::Parser.new(lex(code)))
+    RBS::Formatter.new(parser).compile(type: "raw", experimental: experimental)
   end
 
 

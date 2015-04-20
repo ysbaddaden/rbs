@@ -383,7 +383,7 @@ module RBS
     end
 
     def compile_class_constructor(id, name, node)
-      # TODO: class constructor should be determined at the parser level
+      # TODO: class constructor should be determined at the parser/rewriter level
       index = node.body.find_index do |stmt|
         stmt === :function_statement && stmt.id === :identifier && stmt.id.name == "constructor"
       end

@@ -33,8 +33,6 @@ module RBS
 
   # The parser is heavily influenced by Esprima's parser:
   # http://esprima.org/
-  #
-  # TODO: simplify the AST for a sexp-like (instead of GreaseMonkey)
   class Parser
     attr_reader :lexer
 
@@ -228,6 +226,7 @@ module RBS
       finalizer = parse_ensure_clause
 
       expect(:end)
+      expect(:LF) if match(:LF)
       node(:try_statement, block: block, handlers: handlers, finalizer: finalizer)
     end
 
@@ -262,6 +261,7 @@ module RBS
     def parse_ensure_clause
       if match(:ensure)
         expect(:ensure)
+        expect(:LF) if match(:LF)
         node(:block_statement, body: parse_statements)
       end
     end
@@ -275,6 +275,7 @@ module RBS
 
       if match(:else)
         expect(:else)
+        expect(:LF) if match(:LF)
         alternate = node(:block_statement, body: parse_statements)
       elsif match(:elsif)
         alternate = parse_if_statement(recursive: true)
@@ -421,8 +422,6 @@ module RBS
       end
     end
 
-    # TODO: differentiate logical from binary expressions
-    #
     # The whole operator precedence logic is a copy-paste from esprima:
     # http://esprima.org/
     def parse_binary_expression

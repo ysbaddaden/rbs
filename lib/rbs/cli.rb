@@ -16,7 +16,8 @@ module RBS
 
     def compile(input = nil)
       source = read(input)
-      parser = RBS::Parser.new(RBS::Rewriter.new(RBS::Lexer.new(source)))
+      lexer = RBS::Rewriter.new(RBS::Lexer.new(source))
+      parser = RBS::Parser::Rewriter.new(RBS::Parser.new(lexer))
       formatter = RBS::Formatter.new(parser)
 
       formatter_options = {
@@ -44,7 +45,7 @@ module RBS
     def ast(input = nil)
       source = read(input)
       lexer = RBS::Rewriter.new(RBS::Lexer.new(source))
-      parser = RBS::Parser.new(lexer)
+      parser = RBS::Parser::Rewriter.new(RBS::Parser.new(lexer))
       pp parser.parse.to_h
     end
 
