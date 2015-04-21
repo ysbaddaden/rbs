@@ -233,27 +233,30 @@ module RBS
 
       loop do
         break if match %i(ensure end)
-
-        expect(:rescue)
-        class_names = []
-
-        loop do
-          break if match %i(=> LF)
-          class_names << node(expect(:identifier))
-          break if match %i(=> LF)
-          expect(',')
-        end
-
-        if match('=>')
-          expect('=>')
-          param = node(expect(:identifier))
-        end
-
-        expect(:LF)
-        handlers << node(:catch_clause, class_names: class_names, param: param, body: parse_statements)
+        handlers << parse_rescue_clause
       end
 
       handlers
+    end
+
+    def parse_rescue_clause
+      expect(:rescue)
+      class_names = []
+
+      loop do
+        break if match %i(=> LF)
+        class_names << node(expect(:identifier))
+        break if match %i(=> LF)
+        expect(',')
+      end
+
+      if match('=>')
+        expect('=>')
+        param = node(expect(:identifier))
+      end
+
+      expect(:LF)
+      node(:catch_clause, class_names: class_names, param: param, body: parse_statements)
     end
 
     def parse_ensure_clause
@@ -665,11 +668,15 @@ module RBS
                 when 1
                   "Unexpected token #{token.name} at #{token.position}, expected #{expected.first}"
                 else
-                  tokens = expected.map { |t| t.is_a?(String) ? "'#{t}'" : t }
-                  tokens.pop.tap { |t| tokens[tokens.size - 1] = "#{tokens.last} or #{t}" } if tokens.size > 1
-                  "Unexpected token #{token.name} at #{token.position}, expected one of #{tokens.join(', ')}"
+                  "Unexpected token #{token.name} at #{token.position}, expected one of #{expected_tokens(expected)}"
                 end
       raise ParseError.new(message, token: token)
+    end
+
+    def expected_tokens(expected)
+      tokens = expected.map { |t| t.is_a?(String) ? "'#{t}'" : t }
+      tokens.pop.tap { |t| tokens[tokens.size - 1] = "#{tokens.last} or #{t}" } if tokens.size > 1
+      tokens.join(', ')
     end
 
     def match(type)
