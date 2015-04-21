@@ -77,13 +77,11 @@ module RBS
                return parse_expression_statement
              end
 
-      if match %i(if unless while until)
-        token = expect(:if, :unless, :while, :until)
-        block = node(:block_statement, body: [stmt])
-        stmt = node("#{token.name}_statement", test: parse_expression, consequent: block, alternate: nil)
+      if statement_modifier?
+        expect_statement_modifier(stmt)
+      else
+        stmt
       end
-
-      stmt
     end
 
     def parse_for_statement
@@ -385,13 +383,7 @@ module RBS
     def parse_expression_statement
       expr = parse_expression
       stmt = node(:expression_statement, expression: expr)
-
-      if match %i(if unless while until)
-        token = expect(:if, :unless, :while, :until)
-        block = node(:block_statement, body: [stmt])
-        stmt = node("#{token.name}_statement", test: parse_expression, consequent: block, alternate: nil)
-      end
-
+      stmt = expect_statement_modifier(stmt) if statement_modifier?
       expect_terminator
       stmt
     end
@@ -650,6 +642,16 @@ module RBS
 
     def expect_terminator
       expect(:LF) unless match(INLINE_TERM)
+    end
+
+    def statement_modifier?
+      match %i(if unless while until)
+    end
+
+    def expect_statement_modifier(stmt)
+      token = expect(:if, :unless, :while, :until)
+      block = node(:block_statement, body: [stmt])
+      node("#{token.name}_statement", test: parse_expression, consequent: block, alternate: nil)
     end
 
     def syntax_error(message, token)
