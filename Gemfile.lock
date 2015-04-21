@@ -15,6 +15,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     minitest (5.5.1)
+    rake (10.4.2)
     thor (0.19.1)
 
 PLATFORMS
@@ -23,4 +24,5 @@ PLATFORMS
 DEPENDENCIES
   minitest
   minitest-colorize!
+  rake
   rbs!

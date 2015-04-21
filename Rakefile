@@ -1,13 +1,42 @@
 require 'rake'
 require 'rake/testtask'
 
+$:.unshift File.expand_path("../lib", File.realpath(__FILE__))
+require 'rbs'
+
 task :default => :test
 
-desc 'Run the test suite'
-Rake::TestTask.new(:test) do |t|
+desc 'Run all the test suites'
+task :test => %i(test:unit test:integration)
+
+desc 'Run the unit test suite'
+Rake::TestTask.new(:'test:unit') do |t|
   t.libs << 'test'
   t.pattern = 'test/**/*_test.rb'
   t.verbose = true
+end
+
+desc 'Run the integration test suite'
+task :'test:integration' do |t|
+  unless Dir.exists?('tmp/integration')
+    Dir.mkdir('tmp/integration')
+  end
+
+  Dir['test/integration/*_test.rbs'].each do |input|
+    output = input.sub(/^test/, "tmp").sub(/\.rbs$/, ".js")
+    source = RBS.compile_file(input)
+    File.write(output, source)
+  end
+
+  pid = spawn(
+    'node_modules/.bin/mocha',
+    '--ui', 'tdd',
+    '--reporter', 'dot',
+    'test/integration/test_helper.js',
+    'tmp/integration/*_test.js'
+  )
+  _, status = Process.wait2(pid)
+  exit status.exitstatus
 end
 
 desc 'Enumerate all annotations'

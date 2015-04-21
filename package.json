@@ -1,8 +1,6 @@
 {
     "name": "rbs",
     "version": "0.0.1",
-    "description": "",
-    "keywords": [],
     "author": "Julien Portalier <julien@portalier.com>",
     "repository": {
         "type": "git",
