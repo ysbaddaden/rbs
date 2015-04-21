@@ -40,12 +40,7 @@ module RBS
             close_opened_calls(token)
             next if token.is(:LF) && skip_linefeed?
           when :'{'
-            if state.is(:lambda_def)
-              state.pop # :lambda_def
-              state.push :lambda
-            else
-              state.push :object
-            end
+            detect_lambda_or_object
           when :'}'
             close_opened_calls(token)
             state.pop # :lambda or :object
@@ -77,6 +72,15 @@ module RBS
 
       private
 
+      def detect_lambda_or_object
+        if state.is(:lambda_def)
+          state.pop # :lambda_def
+          state.push :lambda
+        else
+          state.push :object
+        end
+      end
+
       def detect_call_without_parens(token)
         if call_without_parens?
           state.push :call
@@ -85,10 +89,11 @@ module RBS
       end
 
       def call_without_parens?
-        tokens.last === :identifier && (
-          lexer.tokens[index] === :argument ||
-          (lexer.tokens[index] === UNARY && !(lexer.tokens[index + 1] === %i(whitespace LF)))
-        )
+        tokens.last === :identifier && (lexer.tokens[index] === :argument || unary_expression?)
+      end
+
+      def unary_expression?
+        lexer.tokens[index] === UNARY && !(lexer.tokens[index + 1] === %i(whitespace LF))
       end
 
       def close_opened_calls(token)
