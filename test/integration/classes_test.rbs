@@ -7,7 +7,7 @@ class A
   end
 
   def get(attrName)
-    return this[attrName]
+    this[attrName]
   end
 end
 

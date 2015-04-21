@@ -294,7 +294,7 @@ class RBS::FormatterTest < Minitest::Test
 
   def test_function_statement
     assert_format "function a() {}", "def a; end"
-    assert_format "function a() { y; z; }", "def a; y; z; end"
+    assert_format "function a() { y; return z; }", "def a; y; z; end"
     assert_format "function a(b, c, d) {}", "def a(b, c, d) end"
 
     assert_format "a.b.c.d = function () {};", "def a.b.c.d; end"
@@ -314,7 +314,7 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_default_argument_in_function_statements
-    assert_format "function x(a) { if (a === undefined) a = 'b'; log(a); }",
+    assert_format "function x(a) { if (a === undefined) a = 'b'; return log(a); }",
       "def x(a = 'b') log(a); end"
 
     assert_format "function x(a) { if (a === undefined) a = 'b'; }",
@@ -328,16 +328,16 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_variable_scoping_in_function_statements
-    assert_format "function x() { var a, b; b = 1; a = 2; }",
+    assert_format "function x() { var a, b; b = 1; return a = 2; }",
       "def x() b = 1; a = 2; end"
 
-    assert_format "function x(a, b) { var c; a += 1; b = 2; c = 3; }",
+    assert_format "function x(a, b) { var c; a += 1; b = 2; return c = 3; }",
       "def x(a, b) a += 1; b = 2; c = 3; end"
 
-    assert_format "function x(a) { var c; a = {}; a.b = 2; c = 3; }",
+    assert_format "function x(a) { var c; a = {}; a.b = 2; return c = 3; }",
       "def x(a) a = {}; a.b = 2; c = 3; end"
 
-    assert_format "function x(b) { var a = Array.prototype.slice.call(arguments, 1); var c; c = b; b = a; a = {}; }",
+    assert_format "function x(b) { var a = Array.prototype.slice.call(arguments, 1); var c; c = b; b = a; return a = {}; }",
       "def x(b, *a) c = b; b = a; a = {}; end"
   end
 
@@ -411,50 +411,50 @@ class RBS::FormatterTest < Minitest::Test
   end
 
   def test_super_in_class_methods
-    assert_format(/A\.prototype\.bar = function \(\) { B\.prototype\.bar\.apply\(this, arguments\); };/,
+    assert_format(/A\.prototype\.bar = function \(\) { return B\.prototype\.bar\.apply\(this, arguments\); };/,
       "class A < B; def bar; super; end end")
 
-    assert_format(/A\.prototype\.foo = function \(\) { B\.prototype\.foo\.call\(this\); };/,
+    assert_format(/A\.prototype\.foo = function \(\) { return B\.prototype\.foo\.call\(this\); };/,
       "class A < B; def foo; super(); end end")
 
-    assert_format(/A\.prototype\.baz = function \(a\) { B\.prototype\.baz\.call\(this, a, 2\); };/,
+    assert_format(/A\.prototype\.baz = function \(a\) { return B\.prototype\.baz\.call\(this, a, 2\); };/,
       "class A < B; def baz(a); super(a, 2); end end")
 
-    assert_format(/A\.prototype\.foo = function \(\) { B\.prototype\.foo\.apply\(this, *args\); };/,
+    assert_format(/A\.prototype\.foo = function \(\) { return B\.prototype\.foo\.apply\(this, *args\); };/,
       "class A < B; def foo; super(*args); end end")
   end
 
   def test_super_in_object_methods
-    assert_format(/A.bar = function \(\) { B\.bar\.apply\(this, arguments\); };/,
+    assert_format(/A.bar = function \(\) { return B\.bar\.apply\(this, arguments\); };/,
       "object A < B; def bar; super; end end")
 
-    assert_format(/A.foo = function \(\) { B\.foo\.call\(this\); };/,
+    assert_format(/A.foo = function \(\) { return B\.foo\.call\(this\); };/,
       "object A < B; def foo; super(); end end")
 
-    assert_format(/A.baz = function \(a\) { B\.baz\.call\(this, a, 2\); };/,
+    assert_format(/A.baz = function \(a\) { return B\.baz\.call\(this, a, 2\); };/,
       "object A < B; def baz(a); super(a, 2); end end")
 
-    assert_format(/A.foo = function \(\) { B\.foo\.apply\(this, *args\); };/,
+    assert_format(/A.foo = function \(\) { return B\.foo\.apply\(this, *args\); };/,
       "object A < B; def foo; super(*args); end end")
   end
 
   def test_self_in_functions_and_object_and_class_methods
-    assert_format(/function set\(k, v\) { self\.attrs\[k\] = v; }/, "def set(k, v); self.attrs[k] = v; end")
+    assert_format(/function set\(k, v\) { return self\.attrs\[k\] = v; }/, "def set(k, v); self.attrs[k] = v; end")
     assert_format(/function \(k\) { return k\.self; }/, "object Post; def set(k); return k.self; end; end")
 
     assert_format(/function \(\) { var self = this; return self; }/,
       "object Post; def get(); return self; end; end")
 
-    assert_format(/function \(\) { var self = this, x; x = self; }/,
+    assert_format(/function \(\) { var self = this, x; return x = self; }/,
       "object Post; def get(); x = self; end; end")
 
-    assert_format(/function \(k, v\) { var self = this; self\.attrs\[k\] = v; }/,
+    assert_format(/function \(k, v\) { var self = this; return self\.attrs\[k\] = v; }/,
       "object Post; def set(k, v); self.attrs[k] = v; end; end")
 
-    assert_format(/function \(k, v\) { var self = this; self\.attrs\[k\] = v; }/,
+    assert_format(/function \(k, v\) { var self = this; return self\.attrs\[k\] = v; }/,
       "class Post; def set(k, v); self.attrs[k] = v; end; end")
 
-    assert_format(/function \(\) { var self = this; function \(\) { self; }; }/,
+    assert_format(/function \(\) { var self = this; return function \(\) { return self; }; }/,
       "class Post; def lmbd(); -> { self }; end; end")
   end
 

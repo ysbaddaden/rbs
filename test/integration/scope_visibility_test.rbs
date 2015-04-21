@@ -1,21 +1,21 @@
 bar = "bar"
 
 def set_baz
-  return bar = "baz"
+  bar = "baz"
 end
 
 object Foo
   def get_bar
-    return bar
+    bar
   end
 
   def set_baz
-    return bar = "baz"
+    bar = "baz"
   end
 
   def setget_baz
     bar = "baz"
-    return bar
+    bar
   end
 end
 

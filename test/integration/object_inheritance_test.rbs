@@ -2,7 +2,7 @@ object A
   foo = "foo"
 
   def baz
-    return "baz"
+    "baz"
   end
 end
 
@@ -10,7 +10,7 @@ object B < A
   bar = "bar"
 
   def foobar
-    return this.foo + this.bar
+    this.foo + this.bar
   end
 end
 
