@@ -16,7 +16,7 @@ class Minitest::Test
 
 
   def lex(code)
-    RBS::Rewriter.new(RBS::Lexer.new(code))
+    RBS::Lexer::Rewriter.new(RBS::Lexer.new(code))
   end
 
   def parse(code)

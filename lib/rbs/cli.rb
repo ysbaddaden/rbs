@@ -16,7 +16,7 @@ module RBS
 
     def compile(input = nil)
       source = read(input)
-      lexer = RBS::Rewriter.new(RBS::Lexer.new(source))
+      lexer = RBS::Lexer::Rewriter.new(RBS::Lexer.new(source))
       parser = RBS::Parser::Rewriter.new(RBS::Parser.new(lexer))
       formatter = RBS::Formatter.new(parser)
 
@@ -44,7 +44,7 @@ module RBS
 
     def ast(input = nil)
       source = read(input)
-      lexer = RBS::Rewriter.new(RBS::Lexer.new(source))
+      lexer = RBS::Lexer::Rewriter.new(RBS::Lexer.new(source))
       parser = RBS::Parser::Rewriter.new(RBS::Parser.new(lexer))
       pp parser.parse.to_h
     end
@@ -54,7 +54,7 @@ module RBS
 
     def tokens(input = nil)
       source = read(input)
-      lexer = RBS::Rewriter.new(RBS::Lexer.new(source))
+      lexer = RBS::Lexer::Rewriter.new(RBS::Lexer.new(source))
       p lexer.tokens
     end
 

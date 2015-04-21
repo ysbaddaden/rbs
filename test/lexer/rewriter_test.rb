@@ -2,10 +2,10 @@ require 'test_helper'
 require 'rbs/lexer'
 require 'rbs/lexer/rewriter'
 
-class RBS::RewriterTest < Minitest::Test
+class RBS::Lexer::RewriterTest < Minitest::Test
   def test_initialize
     lexer = RBS::Lexer.new("_code_")
-    rewriter = RBS::Rewriter.new(lexer)
+    rewriter = RBS::Lexer::Rewriter.new(lexer)
     assert_same lexer, rewriter.lexer
   end
 
@@ -76,6 +76,6 @@ class RBS::RewriterTest < Minitest::Test
   end
 
   def rewriter(code)
-    RBS::Rewriter.new(RBS::Lexer.new(code))
+    RBS::Lexer::Rewriter.new(RBS::Lexer.new(code))
   end
 end

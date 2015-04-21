@@ -12,7 +12,7 @@ module RBS
   end
 
   def self.compile(source, indent: true, **options)
-    lexer = RBS::Rewriter.new(RBS::Lexer.new(source))
+    lexer = RBS::Lexer::Rewriter.new(RBS::Lexer.new(source))
     parser = RBS::Parser::Rewriter.new(RBS::Parser.new(lexer))
 
     formatter = if indent
