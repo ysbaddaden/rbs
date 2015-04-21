@@ -18,9 +18,8 @@ end
 
 desc 'Run the integration test suite'
 task :'test:integration' do |t|
-  unless Dir.exists?('tmp/integration')
-    Dir.mkdir('tmp/integration')
-  end
+  Dir.mkdir('tmp') unless Dir.exists?('tmp')
+  Dir.mkdir('tmp/integration') unless Dir.exists?('tmp/integration')
 
   Dir['test/integration/*_test.rbs'].each do |input|
     output = input.sub(/^test/, "tmp").sub(/\.rbs$/, ".js")
