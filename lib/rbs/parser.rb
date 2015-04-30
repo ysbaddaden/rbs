@@ -41,7 +41,7 @@ module RBS
       @index = -1
     end
 
-    def parse
+    def parse(_ = nil)
       @program ||= parse_program
     end
 

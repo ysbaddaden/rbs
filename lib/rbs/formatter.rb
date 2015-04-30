@@ -1,5 +1,3 @@
-require "rbs/formatter/negators"
-
 module RBS
   class Formatter
     attr_reader :parser
@@ -13,10 +11,8 @@ module RBS
     end
 
     def compile(type: "iife", experimental: false)
-      @experimental = experimental
-
       program, vars = with_scope(traversable: false) do
-        compile_statements(@parser.parse.body)
+        compile_statements(@parser.parse(experimental: experimental).body)
       end
       code = compile_vars(vars) + program
 
@@ -41,10 +37,8 @@ module RBS
       when :block_statement      then compile_block_statement(stmt)
       when :expression_statement then compile_expression(stmt.expression) + ";"
       when :if_statement         then compile_if_statement(stmt)
-      when :unless_statement     then compile_unless_statement(stmt)
       when :case_statement       then compile_case_statement(stmt)
       when :while_statement      then compile_while_statement(stmt)
-      when :until_statement      then compile_until_statement(stmt)
       when :for_in_statement     then compile_for_in_statement(stmt)
       when :for_of_statement     then compile_for_of_statement(stmt)
       when :loop_statement       then compile_loop_statement(stmt)
@@ -71,18 +65,12 @@ module RBS
       test = compile_expression(ungroup_expression(node.test))
       body = compile_statement(node.consequent)
 
-      if node.alternate
+      if node.respond_to?(:alternate) && node.alternate
         alternate = compile_statement(node.alternate)
         "if (#{test}) #{body} else #{alternate}"
       else
         "if (#{test}) #{body}"
       end
-    end
-
-    def compile_unless_statement(node)
-      test = compile_expression(ungroup_expression(negate(node.test)))
-      body = compile_statement(node.consequent)
-      "if (#{test}) #{body}"
     end
 
     def compile_case_statement(node)
@@ -112,12 +100,6 @@ module RBS
 
     def compile_while_statement(node)
       test = compile_expression(ungroup_expression(node.test))
-      body = compile_statement(node.consequent)
-      "while (#{test}) #{body}"
-    end
-
-    def compile_until_statement(node)
-      test = compile_expression(ungroup_expression(negate(node.test)))
       body = compile_statement(node.consequent)
       "while (#{test}) #{body}"
     end
@@ -624,14 +606,6 @@ module RBS
 
     def ungroup_expression(node)
       node === :group_expression ? node.expression : node
-    end
-
-    def negate(node)
-      if @experimental
-        RBS::Negators.experimental_negate(node)
-      else
-        RBS::Negators.simple_negate(node)
-      end
     end
 
     def with_object(type, name, parent)

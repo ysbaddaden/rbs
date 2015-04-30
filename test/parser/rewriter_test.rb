@@ -92,4 +92,22 @@ class RBS::Parser::RewriterTest < Minitest::Test
       ]
     }] } }, code)
   end
+
+  def test_rewrites_unless_statement_as_if_statement
+    assert_statement :if_statement, "unless x; end"
+    assert_statement({ test: :unary_expression }, "unless x; end")
+
+    with_experimental(true) do
+      assert_statement({ test: :binary_expression }, "unless x > 10; end")
+    end
+  end
+
+  def test_rewrites_until_statement_as_while_statement
+    assert_statement :while_statement, "until x; end"
+    assert_statement({ test: :unary_expression }, "until x; end")
+
+    with_experimental(true) do
+      assert_statement({ test: :binary_expression }, "until x > 10; end")
+    end
+  end
 end

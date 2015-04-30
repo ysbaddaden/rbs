@@ -216,7 +216,7 @@ class RBS::ParserTest < Minitest::Test
     assert_expression :lambda_expression, "->(*args) { args.map(->(x) { x * 2 }) }"
     assert_expression({ arguments: [:identifier, :identifier, :identifier] }, "->(a, b, c) { a + b + c }")
     assert_expression({ arguments: [:splat_expression, :identifier] }, "->(*a, b) {}")
-    assert_expression({ block: { body: [:return_statement] } }, "->(*args) { args.map(->(x) { x * 2 }) }")
+    assert_expression({ block: { body: [:expression_statement] } }, "->(*args) { args.map(->(x) { x * 2 }) }")
   end
 
   def test_group_expression
@@ -322,5 +322,9 @@ class RBS::ParserTest < Minitest::Test
     assert_expression :conditional_expression, "a ? b : c"
     assert_expression({ test: :identifier, consequent: :identifier, alternate: :identifier }, "a ? b : c")
     assert_expression({ right: :conditional_expression }, "x = a > 10 ? a - 1 : a + 2")
+  end
+
+  def parse(code, rewrite: false)
+    super
   end
 end

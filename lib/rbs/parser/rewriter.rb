@@ -1,4 +1,5 @@
 require "rbs/state"
+require "rbs/parser/negators"
 
 module RBS
   class Parser
@@ -13,7 +14,8 @@ module RBS
         @state = State.new
       end
 
-      def parse
+      def parse(experimental: false)
+        @experimental = experimental
         @program ||= @parser.parse.tap(&method(:visit))
       end
 
@@ -27,6 +29,8 @@ module RBS
           end
         when :lambda_expression
           returnable_block_statement(node.block)
+        when :unless_statement, :until_statement
+          negate_statement(node)
         end
 
         state << node.type
@@ -98,7 +102,25 @@ module RBS
         node.handlers.each(&method(:returnable_block_statement))
       end
 
-      private
+      # TODO: consider to replace the current node with a fresh one (?)
+      def negate_statement(node)
+        case node.type
+        when :unless_statement
+          node.type = :if_statement
+          node.test = negate(node.test)
+        when :until_statement
+          node.type = :while_statement
+          node.test = negate(node.test)
+        end
+      end
+
+      def negate(node)
+        if @experimental
+          Negators.experimental_negate(node)
+        else
+          Negators.simple_negate(node)
+        end
+      end
 
       def class_constructor?(node)
         state === :class_statement && node.id === :identifier && node.id.name == "constructor"

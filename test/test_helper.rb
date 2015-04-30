@@ -19,8 +19,10 @@ class Minitest::Test
     RBS::Lexer::Rewriter.new(RBS::Lexer.new(code))
   end
 
-  def parse(code)
-    RBS::Parser::Rewriter.new(RBS::Parser.new(lex(code))).parse
+  def parse(code, rewrite: true)
+    parser = RBS::Parser.new(lex(code))
+    parser = RBS::Parser::Rewriter.new(parser) if rewrite
+    parser.parse(experimental: experimental)
   end
 
   def format(code, type: "raw")
