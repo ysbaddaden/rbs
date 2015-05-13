@@ -90,6 +90,10 @@ class Minitest::Test
     assert_ast expected, parse(code).body.first
   end
 
+  def assert_statements(expected, code)
+    assert_ast expected, parse(code).body
+  end
+
 
   def assert_format(expected, code)
     formatted = format(code).gsub(/\s+/, " ").strip()

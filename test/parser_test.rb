@@ -185,11 +185,29 @@ class RBS::ParserTest < Minitest::Test
 
     assert_statement :while_statement, "tom while jerry"
     assert_statement :while_statement, "next while jerry"
-    assert_statement({ test: :identifier, consequent: :block_statement }, "tom unless jerry")
 
     assert_statement :until_statement, "tom until jerry"
     assert_statement :until_statement, "delete tom.ex until jerry"
-    assert_statement({ test: :identifier, consequent: :block_statement }, "tom unless jerry")
+
+  end
+
+  def test_not_statement_modifiers
+    assert_statements %i(expression_statement if_statement), "a += 1; if jerry; end"
+    assert_statements %i(return_statement unless_statement), "return; unless jerry; end"
+    assert_statements %i(next_statement while_statement), "next; while jerry; end"
+    assert_statements %i(delete_statement until_statement), "delete tom.ex; until jerry; end"
+
+    assert_statements [:if_statement, :if_statement], "if x.y; end; if z; end"
+    assert_statements [:unless_statement, :unless_statement], "unless x.y; end; unless z; end"
+    assert_statements [:while_statement, :while_statement], "while x.y; end; while z; end"
+    assert_statements [:until_statement, :until_statement], "until x.y; end; until z; end"
+    assert_statements [:case_statement, :if_statement], "case x; when 1; end; if y; end"
+    assert_statements [:loop_statement, :if_statement], "loop do; end; if y; end"
+    assert_statements [:for_in_statement, :if_statement], "for x in a; end; if y; end"
+
+    assert_statements [:function_statement, :if_statement], "def x; end; if y; end"
+    assert_statements [:object_statement, :if_statement], "object X; end; if y; end"
+    assert_statements [:class_statement, :if_statement], "class X; end; if y; end"
   end
 
   def test_primary_expression

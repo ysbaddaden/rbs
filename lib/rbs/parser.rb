@@ -80,6 +80,7 @@ module RBS
       if statement_modifier?
         expect_statement_modifier(stmt)
       else
+        expect_terminator if match(:LF)
         stmt
       end
     end
@@ -191,9 +192,11 @@ module RBS
           break
         elsif match(:object)
           body << parse_object_statement
+          expect(:LF) if match(:LF)
           next
         elsif match(:class)
           body << parse_class_statement
+          expect(:LF) if match(:LF)
           next
         elsif match(:def)
           body << parse_def_statement(allow_member: false)
@@ -208,7 +211,6 @@ module RBS
       end
 
       expect(:end)
-      expect(:LF) unless match(:EOF)
 
       [id, parent, body]
     end
@@ -282,8 +284,11 @@ module RBS
         alternate = parse_if_statement(recursive: true)
       end
 
-      expect(:end) unless recursive
-      expect_terminator
+      if recursive
+        expect_terminator
+      else
+        expect(:end)
+      end
 
       node(:if_statement, test: test, consequent: block, alternate: alternate)
     end
@@ -306,7 +311,6 @@ module RBS
 
       block = node(:block_statement, body: parse_statements)
       expect(:end)
-      expect_terminator
 
       node(:loop_statement, consequent: block)
     end
@@ -318,7 +322,6 @@ module RBS
 
       block = node(:block_statement, body: parse_statements)
       expect(:end)
-      expect_terminator
 
       node("#{name}_statement", test: test, consequent: block)
     end
@@ -340,8 +343,6 @@ module RBS
       end
 
       expect(:end)
-      expect_terminator
-
       node(:case_statement, test: test, cases: cases, alternate: alternate)
     end
 
@@ -362,10 +363,10 @@ module RBS
     def parse_return_statement
       expect(:return)
 
-      unless match %i(if unless while until)
+      unless statement_modifier?
         argument = parse_expression unless match(:LF) || match(INLINE_TERM)
-        expect_terminator
       end
+
       node(:return_statement, argument: argument)
     end
 
@@ -378,7 +379,6 @@ module RBS
         syntax_error("Expected member expression but got #{argument.type}", position_token)
       end
 
-      expect_terminator unless match %i(if unless while until)
       node(:delete_statement, argument: argument)
     end
 
@@ -387,7 +387,7 @@ module RBS
       expr = parse_expression
       stmt = node(:expression_statement, expression: expr)
       stmt = expect_statement_modifier(stmt) if statement_modifier?
-      expect_terminator
+      expect_terminator # NOTE: maybe it should be dropped?
       stmt
     end
 
@@ -511,6 +511,7 @@ module RBS
       node(:object_expression, properties: properties)
     end
 
+    # TODO: parse shorter lambda expressions (crystal inspired): coll.forEach(&.prepare().save())
     def parse_primary_expression
       case lookahead.name
       when :BOOLEAN, :NIL, :NUMBER, :REGEXP
