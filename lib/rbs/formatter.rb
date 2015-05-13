@@ -427,7 +427,7 @@ module RBS
         compile_super_expression(node)
       else
         declare_self_variable if define_self && node.name == "self"
-        node.name
+        node.name.to_s
       end
     end
 
